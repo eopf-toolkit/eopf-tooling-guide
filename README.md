@@ -10,7 +10,7 @@ The EOPF Toolkit provides a suite of libraries and plugins to facilitate working
 
 | Tools                   | Description                               | Status         | Repository                                                              |
 | ----------------------- | ----------------------------------------- | -------------- | ----------------------------------------------------------------------- |
-| STAC + Zarr             | EOPF Zarr Access from STAC                | In Development | [STAC+Zarr](docs/tutorials/stac_zarr)                                   |
+| STAC + Zarr             | EOPF Zarr Access from STAC                | In Development | [STAC+Zarr](docs/tutorials/stac_zarr.md)                                   |
 | GDAL Zarr Driver        | Enhanced GDAL driver for EOPF Zarr        | Planned        | TBD                                                                     |
 | QGIS Plugin             | Native QGIS integration for EOPF Zarr     | Planned        | TBD                                                                     |
 | R Integration           | R libraries for EOPF Zarr access          | Planned        | TBD                                                                     |
