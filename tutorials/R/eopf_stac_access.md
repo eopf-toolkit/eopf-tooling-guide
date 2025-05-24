@@ -1,0 +1,410 @@
+# How to for the EOPF Sample Service STAC catalog
+
+
+## Table of Contents
+
+## Introduction
+
+This tutorial will explore how to access the [EOPF Sample Service STAC
+catalog](https://stac.browser.user.eopf.eodc.eu/) programatically using
+R.
+
+## Prerequisites
+
+An R environment is required to follow this tutorial, with R version \>=
+4.1.0. We recommend using either
+[RStudio](https://posit.co/download/rstudio-desktop/) or
+[Positron](https://posit.co/products/ide/positron/), and making use of
+[RStudio
+projects](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects)
+for a self-contained coding environment.
+
+### Dependencies
+
+The `rstatc` package is required to follow this toturial. You can
+install it directly from CRAN:
+
+``` r
+install.packages("rstac")
+```
+
+Then load the package into your environment:
+
+``` r
+library(rstac)
+```
+
+## Exploring the EOPF Sample Service STAC catalog
+
+### Setting up the API
+
+To access the EOPF Sample Service STAC catalog in R, we need to give the
+URL of the STAC API source (<https://stac.core.eopf.eodc.eu/>) using the
+function `stac()`.
+
+The object `stac_source` is a query containing information used *to*
+connect to the API, but it does not actually make any requests. To make
+requests to the API, we will always need to use `get_request()` or
+`put_request()`, as appropriate. running `get_request()` on
+`stac_source` actually retrieves the catalogue:
+
+``` r
+stac_source <- stac("https://stac.core.eopf.eodc.eu/")
+
+stac_source |>
+  get_request()
+```
+
+    ###Catalog
+    - id: eopf-sample-service-stac-api
+    - description: STAC catalog of the EOPF Sentinel Zarr Samples Service
+    - field(s): 
+    type, id, title, description, stac_version, conformsTo, links, stac_extensions
+
+### Collections
+
+A STAC *Collection* exists to relate similar datasets together through
+space, time, and shared metadata. Each Sentinel mission and the
+downstream analysis-ready data are examples of STAC Collections. To
+browse STAC Collections, the `collections()` function is used. We can
+see that there are 11 collections available in the API, as well as
+information
+
+``` r
+stac_collections <- stac_source %>%
+  collections() %>%
+  get_request()
+
+stac_collections
+```
+
+    ###Collections
+    - collections (11 item(s)):
+      - sentinel-2-l2a
+      - sentinel-3-slstr-l1-rbt
+      - sentinel-3-olci-l2-lfr
+      - sentinel-2-l1c
+      - sentinel-3-slstr-l2-lst
+      - sentinel-1-l1-slc
+      - sentinel-3-olci-l1-efr
+      - sentinel-3-olci-l1-err
+      - sentinel-1-l2-ocn
+      - sentinel-1-l1-grd
+      - sentinel-3-olci-l2-lrr
+    - field(s): collections, links, numberMatched, numberReturned
+
+The default printing of the `stac_collections()` object summarises
+what’s been returned, but does not give all of the information. To see
+more about what’s been returned, we can used `str()`.
+
+``` r
+stac_collections %>%
+  str(max.level = 1)
+```
+
+    List of 4
+     $ collections   :List of 11
+     $ links         :List of 3
+      ..- attr(*, "class")= chr [1:2] "doc_links" "list"
+     $ numberMatched : int 11
+     $ numberReturned: int 11
+     - attr(*, "class")= chr [1:3] "doc_collections" "rstac_doc" "list"
+
+Here, we can see that there is an entry `"collections"` within
+`stac_collections`, which we access to return the collections themselves
+(using `head()` to only return a few). This shows additional details
+about each collection, such as the collection id, title, description,
+and additional fields in the collections.
+
+``` r
+stac_collections[["collections"]] %>%
+  head(n = 3)
+```
+
+    [[1]]
+    ###Collection
+    - id: sentinel-2-l2a
+    - title: Sentinel-2 Level-2A
+    - description: 
+    The Sentinel-2 Level-2A Collection 1 product provides orthorectified Surface Reflectance (Bottom-Of-Atmosphere: BOA), with sub-pixel multispectral and multitemporal registration accuracy. Scene Classification (including Clouds and Cloud Shadows), AOT (Aerosol Optical Thickness) and WV (Water Vapour) maps are included in the product.
+    - field(s): 
+    id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
+
+    [[2]]
+    ###Collection
+    - id: sentinel-3-slstr-l1-rbt
+    - title: Sentinel-3 SLSTR Level-1 RBT
+    - description: 
+    The Sentinel-3 SLSTR Level-1B RBT product provides radiances and brightness temperatures for each pixel in a regular image grid for each view and SLSTR channel. In addition, it also contains annotations data associated with each image pixels.
+    - field(s): 
+    id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
+
+    [[3]]
+    ###Collection
+    - id: sentinel-3-olci-l2-lfr
+    - title: Sentinel-3 OLCI Level-2 LFR
+    - description: 
+    The Sentinel-3 OLCI L2 LFR product provides land and atmospheric geophysical parameters computed for full resolution.
+    - field(s): 
+    id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
+
+The Sentinel-2 Level-2A can be accessed by getting the first entry in
+`stac_collections()[["collections"]]`
+
+``` r
+stac_collections[["collections"]][[1]]
+```
+
+    ###Collection
+    - id: sentinel-2-l2a
+    - title: Sentinel-2 Level-2A
+    - description: 
+    The Sentinel-2 Level-2A Collection 1 product provides orthorectified Surface Reflectance (Bottom-Of-Atmosphere: BOA), with sub-pixel multispectral and multitemporal registration accuracy. Scene Classification (including Clouds and Cloud Shadows), AOT (Aerosol Optical Thickness) and WV (Water Vapour) maps are included in the product.
+    - field(s): 
+    id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
+
+However, the best way to access a specific collection is to search for
+it directly using the collection `id`. The `id`, “sentinel-2-l2a”, is
+visible in the Collection output above. It is also accessible in the
+browsable STAC catalog of the EOPF Sentinel Zarr Samples Service, on the
+page for that collection
+(<https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a>)
+
+<figure>
+<img src="images/eopf-stac-access-collections-id.png"
+alt="Finding the collection ID in the STAC catalog" />
+<figcaption aria-hidden="true">Finding the collection ID in the STAC
+catalog</figcaption>
+</figure>
+
+(TODO -\> consistent way of “highlighting” sections of pages)
+
+The collection ID can be supplied directly in the `collections()`
+function. If we look at the query without getting the result, we can see
+that it has been formed using the `collection_id`, “sentinel-2-l2a”, as
+a filter parameter.
+
+``` r
+sentinel_2_l2a_query <- stac_source %>%
+  collections(collection_id = "sentinel-2-l2a")
+
+sentinel_2_l2a_query
+```
+
+    ###rstac_query
+    - url: https://stac.core.eopf.eodc.eu/
+    - params:
+      - collection_id: sentinel-2-l2a
+    - field(s): version, base_url, endpoint, params, verb, encode
+
+And that running `get_request()` will return the collection itself:
+
+``` r
+sentinel_2_l2a_query %>%
+  get_request()
+```
+
+    ###Collection
+    - id: sentinel-2-l2a
+    - title: Sentinel-2 Level-2A
+    - description: 
+    The Sentinel-2 Level-2A Collection 1 product provides orthorectified Surface Reflectance (Bottom-Of-Atmosphere: BOA), with sub-pixel multispectral and multitemporal registration accuracy. Scene Classification (including Clouds and Cloud Shadows), AOT (Aerosol Optical Thickness) and WV (Water Vapour) maps are included in the product.
+    - field(s): 
+    id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
+
+## Items
+
+Within collections, there are *items*. Items are the building blocks for
+STAC. At their core, they are GeoJSON data, along with additional
+metadata which ensures data provenance is maintained and specific data
+attributes are captured. A single capture from a Sentinel mission is an
+example of a STAC item. To get an overview of items within a collection,
+the `items()` function is used.
+
+An important thing to note with `rstac` is that you cannot continue to
+build queries on top of ones that have already had their results
+returned (via `get_request()`). It may make sense for a typical workflow
+in R to “get” the collection, then to try to get the items from it, but
+this will produce an error:
+
+``` r
+sentinel_2_l2a_collection <- stac_source %>%
+  collections(collection_id = "sentinel-2-l2a") %>%
+  get_request()
+
+sentinel_2_l2a_collection %>%
+  items()
+```
+
+    Error: Invalid rstac_query value.
+
+If you see this error — `"Invalid rstac_query value"` — ensure that you
+are running `get_request()` at the very end of your query building
+functions. Using `items()` this way, we can see that it returns a
+summary of the collection’s items:
+
+``` r
+sentinel_2_l2a_collection <- stac_source %>%
+  collections(collection_id = "sentinel-2-l2a") %>%
+  items() %>%
+  get_request()
+
+sentinel_2_l2a_collection
+```
+
+    ###Items
+    - features (10 item(s)):
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18RXQ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18RWQ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QXL_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QWJ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QTL_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T17QRE_20250523T191532
+      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWV_20250523T191457
+      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWR_20250523T191436
+      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWQ_20250523T191457
+      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WVR_20250523T191457
+    - assets: 
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+``` r
+# List items in a collection
+# One thing to note is that we CANNOT use `items()` on `sentinel_2_l2a_collection`, because `get_request()` has already been run on it
+# Need to build the query, and *then* `get_request()`
+sentinel_2_l2a_collection_items <- stac_source %>%
+  collections(collection_id = "sentinel-2-l2a") %>%
+  items() %>%
+  get_request()
+
+# This just gets the first 10 items
+sentinel_2_l2a_collection_items %>%
+  items_length()
+
+# This can be changed with the `limit` argument in `items()`, but better to just search
+stac_source %>%
+  collections(collection_id = "sentinel-2-l2a") %>%
+  items(limit = 15) %>%
+  get_request()
+```
+
+``` r
+# Use `stac_search()` to search for items in a collection based on a number of possible critera
+
+# Bounding box - in WGS84 latitude/longitude -> minimum longitude, minimum latitude, maximum longitude, maximum latitude
+stac_source %>%
+  stac_search(
+    collections = "sentinel-2-l2a",
+    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
+  ) %>%
+  get_request()
+
+# In theory... we can use `items_matched()` to see how many match in a search:
+stac_source %>%
+  stac_search(
+    collections = "sentinel-2-l2a",
+    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
+  ) %>%
+  get_request() %>%
+  items_matched()
+# But: returns an integer value if the STAC web server does support this extension. Otherwise returns NULL.
+# Not supported here
+
+# Time range: datetime filter
+# From the docs:
+# a character with a date-time or an interval. Date and time strings needs to conform to RFC 3339. Intervals are expressed # by separating two date-time strings by '/' character. Open intervals are expressed by using '..' in place of date-time.
+#
+# Examples:
+# A date-time: "2018-02-12T23:20:50Z"
+# A closed interval: "2018-02-12T00:00:00Z/2018-03-18T12:31:12Z"
+# Open intervals: "2018-02-12T00:00:00Z/.." or "../2018-03-18T12:31:12Z"
+# Only features that have a datetime property that intersects the interval or date-time informed in datetime are selected.
+
+# 2024-01-01 to 2024-01-02
+stac_source %>%
+  stac_search(
+    collection = "sentinel-2-l2a",
+    datetime = "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"
+  ) %>%
+  get_request()
+
+# Additional filters: instrument, platform
+# stac_search does not support all filters -> we can also use `ext_filter()`
+stac_source %>%
+  ext_filter(
+    collection == "sentinel-2-l2a" && `eo:cloud_cover` <= 10
+  ) %>%
+  get_request()
+
+# This isn't working:
+x <- stac_source %>%
+  ext_filter(
+    collection == "sentinel-2-l2a" && instruments != "msi"
+  ) %>%
+  get_request()
+
+# I wonder if it's some sort of case sensitivity etc?
+x$features[[1]]$properties$instruments
+
+# Combining filters
+# bbox and datetime
+stac_source %>%
+  stac_search(
+    collections = "sentinel-2-l2a",
+    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314),
+    datetime = "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"
+  ) %>%
+  get_request()
+
+# bbox and cloud coverage -> combining stac_search() and ext_filter()
+stac_source %>%
+  stac_search(
+    collections = "sentinel-2-l2a",
+    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
+  ) %>%
+  ext_filter(`eo:cloud_cover` <= 40) %>%
+  get_request()
+```
+
+\[\] Accessing item metadata
+
+-   \[\] Understanding STAC item structure
+-   \[\] Extracting key metadata elements
+-   \[\] Identifying Zarr assets within items
+
+``` r
+# Access a specific item(s) by ID
+
+# (ID is available from the browser, click "Source" and copy it)
+# https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a/items/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203?.language=en
+example_item <- stac_source %>%
+  stac_search(
+    collections = "sentinel-2-l2a",
+    ids = "S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203"
+  ) %>%
+  get_request()
+
+example_item
+```
+
+``` r
+# List the assets in an item
+example_item %>%
+  items_assets()
+```
+
+``` r
+# Select specific assets
+example_item %>%
+  assets_select(asset_names = "AOT_10m")
+```
+
+``` r
+# See its URL
+asset_url <- example_item %>%
+  assets_select(asset_names = "AOT_10m") %>%
+  assets_url()
+
+asset_url
+```
