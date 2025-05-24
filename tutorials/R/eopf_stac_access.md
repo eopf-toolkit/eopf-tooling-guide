@@ -269,6 +269,10 @@ sentinel_2_l2a_collection
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
+------------------------------------------------------------------------
+
+(wip after here)
+
 ``` r
 # List items in a collection
 # One thing to note is that we CANNOT use `items()` on `sentinel_2_l2a_collection`, because `get_request()` has already been run on it

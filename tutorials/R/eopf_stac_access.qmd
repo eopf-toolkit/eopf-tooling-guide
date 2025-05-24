@@ -125,6 +125,10 @@ sentinel_2_l2a_collection <- stac_source %>%
 sentinel_2_l2a_collection
 ```
 
+-----
+
+(wip after here)
+
 ```{r items}
 #| eval: false
 
