@@ -244,26 +244,26 @@ functions. Using `items()` this way, we can see that it returns a
 summary of the collection’s items:
 
 ``` r
-sentinel_2_l2a_collection <- stac_source %>%
+sentinel_2_l2a_collection_items <- stac_source %>%
   collections(collection_id = "sentinel-2-l2a") %>%
   items() %>%
   get_request()
 
-sentinel_2_l2a_collection
+sentinel_2_l2a_collection_items
 ```
 
     ###Items
     - features (10 item(s)):
       - S2B_MSIL2A_20250523T154549_N0511_R111_T18RXQ_20250523T191532
       - S2B_MSIL2A_20250523T154549_N0511_R111_T18RWQ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18RUQ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18RUP_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QXM_20250523T191532
       - S2B_MSIL2A_20250523T154549_N0511_R111_T18QXL_20250523T191532
       - S2B_MSIL2A_20250523T154549_N0511_R111_T18QWJ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QUK_20250523T191532
       - S2B_MSIL2A_20250523T154549_N0511_R111_T18QTL_20250523T191532
-      - S2B_MSIL2A_20250523T154549_N0511_R111_T17QRE_20250523T191532
-      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWV_20250523T191457
-      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWR_20250523T191436
-      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWQ_20250523T191457
-      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WVR_20250523T191457
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QTK_20250523T191532
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
@@ -274,24 +274,42 @@ sentinel_2_l2a_collection
 (wip after here)
 
 ``` r
-# List items in a collection
-# One thing to note is that we CANNOT use `items()` on `sentinel_2_l2a_collection`, because `get_request()` has already been run on it
-# Need to build the query, and *then* `get_request()`
-sentinel_2_l2a_collection_items <- stac_source %>%
-  collections(collection_id = "sentinel-2-l2a") %>%
-  items() %>%
-  get_request()
-
 # This just gets the first 10 items
 sentinel_2_l2a_collection_items %>%
   items_length()
+```
 
+    [1] 10
+
+``` r
 # This can be changed with the `limit` argument in `items()`, but better to just search
 stac_source %>%
   collections(collection_id = "sentinel-2-l2a") %>%
   items(limit = 15) %>%
   get_request()
 ```
+
+    ###Items
+    - features (15 item(s)):
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18RXQ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18RWQ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18RUQ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18RUP_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QXM_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QXL_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QWJ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QUK_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QTL_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QTK_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T17QRE_20250523T191532
+      - S2B_MSIL2A_20250523T152809_N0511_R111_T22WFB_20250523T191457
+      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWV_20250523T191457
+      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWR_20250523T191436
+      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWQ_20250523T191457
+    - assets: 
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
 ``` r
 # Use `stac_search()` to search for items in a collection based on a number of possible critera
@@ -303,7 +321,26 @@ stac_source %>%
     bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
   ) %>%
   get_request()
+```
 
+    ###Items
+    - features (10 item(s)):
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LNF_20241204T160951
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LNE_20241204T160951
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LND_20241204T160951
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LME_20241204T160951
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LMD_20241204T160951
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LMC_20241204T180059
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LMC_20241204T160951
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LLD_20241204T180059
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LLC_20241204T180059
+      - S2A_MSIL2A_20241204T132231_N0511_R038_T23LLC_20241204T160951
+    - assets: 
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+``` r
 # In theory... we can use `items_matched()` to see how many match in a search:
 stac_source %>%
   stac_search(
@@ -312,6 +349,11 @@ stac_source %>%
   ) %>%
   get_request() %>%
   items_matched()
+```
+
+    NULL
+
+``` r
 # But: returns an integer value if the STAC web server does support this extension. Otherwise returns NULL.
 # Not supported here
 
@@ -332,7 +374,17 @@ stac_source %>%
     datetime = "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"
   ) %>%
   get_request()
+```
 
+    ###Items
+    - features (1 item(s)):
+      - S2A_MSIL2A_20240101T102431_N0510_R065_T32TNT_20240101T144052
+    - assets: 
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+``` r
 # Additional filters: instrument, platform
 # stac_search does not support all filters -> we can also use `ext_filter()`
 stac_source %>%
@@ -340,17 +392,43 @@ stac_source %>%
     collection == "sentinel-2-l2a" && `eo:cloud_cover` <= 10
   ) %>%
   get_request()
+```
 
+    ###Items
+    - features (10 item(s)):
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QWJ_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QUK_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T18QTK_20250523T191532
+      - S2B_MSIL2A_20250523T154549_N0511_R111_T17QRE_20250523T191532
+      - S2B_MSIL2A_20250523T152809_N0511_R111_T21WWV_20250523T191457
+      - S2C_MSIL2A_20250523T145741_N0511_R039_T20QNG_20250523T180218
+      - S2C_MSIL2A_20250523T145741_N0511_R039_T20QNF_20250523T180218
+      - S2C_MSIL2A_20250523T145741_N0511_R039_T20QNE_20250523T180218
+      - S2C_MSIL2A_20250523T145741_N0511_R039_T20QND_20250523T180218
+      - S2C_MSIL2A_20250523T145741_N0511_R039_T20QMG_20250523T180218
+    - assets: 
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+``` r
 # This isn't working:
 x <- stac_source %>%
   ext_filter(
-    collection == "sentinel-2-l2a" && instruments != "msi"
+    collection == "sentinel-2-l2a" && instruments == "msi"
   ) %>%
   get_request()
 
 # I wonder if it's some sort of case sensitivity etc?
-x$features[[1]]$properties$instruments
+x
+```
 
+    ###Items
+    - features (0 item(s)):
+    - assets: 
+    - item's fields: 
+
+``` r
 # Combining filters
 # bbox and datetime
 stac_source %>%
@@ -360,7 +438,14 @@ stac_source %>%
     datetime = "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"
   ) %>%
   get_request()
+```
 
+    ###Items
+    - features (0 item(s)):
+    - assets: 
+    - item's fields: 
+
+``` r
 # bbox and cloud coverage -> combining stac_search() and ext_filter()
 stac_source %>%
   stac_search(
@@ -371,11 +456,15 @@ stac_source %>%
   get_request()
 ```
 
-\[\] Accessing item metadata
-
--   \[\] Understanding STAC item structure
--   \[\] Extracting key metadata elements
--   \[\] Identifying Zarr assets within items
+    ###Items
+    - features (3 item(s)):
+      - S2A_MSIL2A_20241203T221941_N0511_R029_T01LAF_20241204T000925
+      - S2A_MSIL2A_20241201T131241_N0511_R138_T23LQC_20241201T162047
+      - S2A_MSIL2A_20241201T131241_N0511_R138_T23KQB_20241201T162047
+    - assets: 
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
 ``` r
 # Access a specific item(s) by ID
@@ -392,17 +481,39 @@ example_item <- stac_source %>%
 example_item
 ```
 
+    ###Items
+    - features (1 item(s)):
+      - S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203
+    - assets: 
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
 ``` r
 # List the assets in an item
 example_item %>%
   items_assets()
 ```
 
+     [1] "AOT_10m"          "B01_20m"          "B02_10m"          "B03_10m"         
+     [5] "B04_10m"          "B05_20m"          "B06_20m"          "B07_20m"         
+     [9] "B08_10m"          "B09_60m"          "B11_20m"          "B12_20m"         
+    [13] "B8A_20m"          "product"          "product_metadata" "SCL_20m"         
+    [17] "SR_10m"           "SR_20m"           "SR_60m"           "TCI_10m"         
+    [21] "WVP_10m"         
+
 ``` r
 # Select specific assets
 example_item %>%
   assets_select(asset_names = "AOT_10m")
 ```
+
+    ###Items
+    - features (1 item(s)):
+      - S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203
+    - assets: AOT_10m
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
 ``` r
 # See its URL
@@ -412,3 +523,14 @@ asset_url <- example_item %>%
 
 asset_url
 ```
+
+    [1] "https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203.zarr/quality/atmosphere/r10m/aot"
+
+``` r
+# The "product" asset is what will be used in the Zarr tutorial
+example_item %>%
+  assets_select(asset_names = "product") %>%
+  assets_url()
+```
+
+    [1] "https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203.zarr"

@@ -116,13 +116,12 @@ sentinel_2_l2a_collection %>%
 If you see this error --- `"Invalid rstac_query value"` --- ensure that you are running `get_request()` at the very end of your query building functions. Using `items()` this way, we can see that it returns a summary of the collection's items:
 
 ```{r get-items}
-
-sentinel_2_l2a_collection <- stac_source %>%
+sentinel_2_l2a_collection_items <- stac_source %>%
   collections(collection_id = "sentinel-2-l2a") %>%
   items() %>%
   get_request()
 
-sentinel_2_l2a_collection
+sentinel_2_l2a_collection_items
 ```
 
 -----
@@ -130,16 +129,6 @@ sentinel_2_l2a_collection
 (wip after here)
 
 ```{r items}
-#| eval: false
-
-# List items in a collection
-# One thing to note is that we CANNOT use `items()` on `sentinel_2_l2a_collection`, because `get_request()` has already been run on it
-# Need to build the query, and *then* `get_request()`
-sentinel_2_l2a_collection_items <- stac_source %>%
-  collections(collection_id = "sentinel-2-l2a") %>%
-  items() %>%
-  get_request()
-
 # This just gets the first 10 items
 sentinel_2_l2a_collection_items %>%
   items_length()
@@ -151,7 +140,7 @@ stac_source %>%
   get_request()
 ```
 
-```{r search-items, eval = FALSE}
+```{r search-items}
 # Use `stac_search()` to search for items in a collection based on a number of possible critera
 
 # Bounding box - in WGS84 latitude/longitude -> minimum longitude, minimum latitude, maximum longitude, maximum latitude
@@ -202,12 +191,12 @@ stac_source %>%
 # This isn't working:
 x <- stac_source %>%
   ext_filter(
-    collection == "sentinel-2-l2a" && instruments != "msi"
+    collection == "sentinel-2-l2a" && instruments == "msi"
   ) %>%
   get_request()
 
 # I wonder if it's some sort of case sensitivity etc?
-x$features[[1]]$properties$instruments
+x
 
 # Combining filters
 # bbox and datetime
@@ -229,14 +218,7 @@ stac_source %>%
   get_request()
 ```
 
-[] Accessing item metadata
-
-- [] Understanding STAC item structure
-- [] Extracting key metadata elements
-- [] Identifying Zarr assets within items
-  
-
-```{r, eval = FALSE}
+```{r}
 # Access a specific item(s) by ID
 
 # (ID is available from the browser, click "Source" and copy it)
@@ -251,19 +233,19 @@ example_item <- stac_source %>%
 example_item
 ```
 
-```{r, eval = FALSE}
+```{r}
 # List the assets in an item
 example_item %>%
   items_assets()
 ```
 
-```{r, eval = FALSE}
+```{r}
 # Select specific assets
 example_item %>%
   assets_select(asset_names = "AOT_10m")
 ```
 
-```{r, eval = FALSE}
+```{r}
 # See its URL
 asset_url <- example_item %>%
   assets_select(asset_names = "AOT_10m") %>%
@@ -271,3 +253,11 @@ asset_url <- example_item %>%
 
 asset_url
 ```
+
+```{r}
+# The "product" asset is what will be used in the Zarr tutorial
+example_item %>%
+  assets_select(asset_names = "product") %>%
+  assets_url()
+```
+
