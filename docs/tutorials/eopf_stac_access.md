@@ -168,7 +168,7 @@ for item in time_search_results_sample.items():
 
 #### Platform
 
-Search for items whose platform is 'sentinel-2b'.
+Search for items whose platform is 'sentinel-2b' using [CQL2-JSON](https://docs.ogc.org/is/21-065r2/21-065r2.html).
 
 ```python
 platform_search_results_sample = client.search(
