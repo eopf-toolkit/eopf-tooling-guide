@@ -59,6 +59,7 @@ print(
         else client.description[: max_description_length - 3] + "...",
     )
 )
+# Connected to Catalog eopf-sample-service-stac-api: STAC catalog of the EOPF Sentinel Zarr Samples Service
 ```
 
 ### Browse Available Collections
@@ -70,7 +71,7 @@ Iterate through available collections and report some basic information about ea
 
 ```python
 all_collections: Optional[List[Collection]] = None
-# May fail due to #18
+# The simplest approach to retrieve all collections may fail due to #18.
 try:
     all_collections = [_ for _ in client.get_all_collections()]
     print(
@@ -82,15 +83,16 @@ except Exception:
     )
 
 if all_collections is None:
-    # Workaround for #18
+    # If collection retrieval fails due to #18.
     valid_collections: List[Collection] = []
     for collection_href in [link.absolute_href for link in client.get_child_links()]:
         collection_dict = requests.get(url=collection_href).json()
         try:
+            # Attempt to retrieve collections individually.
             valid_collections.append(Collection.from_dict(collection_dict))
         except Exception as e:
             if isinstance(e, TypeError) and "not subscriptable" in str(e).lower():
-                # This exception is expected for some collections due to #18
+                # This exception is expected for some collections due to #18.
                 continue
             else:
                 raise e
@@ -106,7 +108,7 @@ for collection in all_collections:
                 parent_id=collection_parent.id,
             )
         )
-    # Do not print the entire description as it may be very long
+    # Do not print the entire description as it may be very long.
     print(
         " - Description: {description}".format(
             description=collection.description
@@ -114,6 +116,12 @@ for collection in all_collections:
             else collection.description[: max_description_length - 3] + "..."
         )
     )
+# Collection sentinel-2-l2a
+#  - Child of eopf-sample-service-stac-api
+#  - Description: The Sentinel-2 Level-2A Collection 1 product provides orthorectified Surface Reflectance (Bottom-...
+# Collection sentinel-3-slstr-l1-rbt
+#  - Child of eopf-sample-service-stac-api
+# ...
 ```
 
 ### Search for Items
@@ -138,6 +146,7 @@ for item in bbox_search_results_sample.items():
             id=item.id, bbox=item.bbox
         )
     )
+# bbox search result item ID: S2C_MSIL2A_20250524T104641_N0511_R051_T31UDQ_20250524T163212, BBOX: [[1.614272368185704, 48.6570207750582, 3.135213595780942, 49.652643868751746]]
 ```
 
 #### Temporal Extent (Time Range)
@@ -154,6 +163,7 @@ for item in time_search_results_sample.items():
             id=item.id, datetime=item.datetime
         )
     )
+# time search result item ID: S1A_IW_GRDH_1SDV_20250522T235715_20250522T235740_059314_075C7F_3BAF, datetime: 2025-05-22 23:57:15.852610+00:00
 ```
 
 #### Platform
@@ -172,6 +182,7 @@ for item in platform_search_results_sample.items():
             id=item.id, platform=item.properties["platform"]
         )
     )
+# platform search result item ID: S2B_MSIL2A_20250525T192909_N0511_R142_T09UXB_20250525T231223, platform: sentinel-2b
 ```
 
 #### Instruments
@@ -190,6 +201,7 @@ for item in instruments_search_results_sample.items():
             id=item.id, instruments=item.properties["instruments"]
         )
     )
+# instruments search result item ID: S2A_MSIL1C_20250526T091041_N0511_R050_T37WEP_20250526T095612, instruments: ['msi']
 ```
 
 #### Combined Search Criteria
@@ -224,6 +236,7 @@ for item in combined_search_results_sample.items():
             instruments=item.properties["instruments"],
         )
     )
+# combined search result item ID: S2B_MSIL2A_20250522T105619_N0511_R094_T31UDQ_20250522T121018, BBOX: [1.614272368185704, 48.6570207750582, 2.965285229911794, 49.65172617595335], datetime: 2025-05-22 10:56:19.024000+00:00, platform: sentinel-2b, instruments: ['msi']
 ```
 
 ### STAC Item Metadata
@@ -251,4 +264,10 @@ for asset_name, asset in sample_item.get_assets(media_type=MediaType.ZARR).items
             asset_name=asset_name, asset_href=asset.href
         )
     )
+# Sample item S2B_MSIL2A_20250522T105619_N0511_R094_T32WPE_20250522T121018
+#  - Datetime: 2025-05-22 10:56:19.024000+00:00
+#  - Processing Level: L2A
+#  - Zarr asset SR_10m at https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T105619_N0511_R094_T32WPE_20250522T121018.zarr/measurements/reflectance/r10m
+#  - Zarr asset SR_20m at https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T105619_N0511_R094_T32WPE_20250522T121018.zarr/measurements/reflectance/r20m
+# ...
 ```
