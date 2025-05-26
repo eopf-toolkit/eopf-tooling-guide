@@ -48,8 +48,8 @@ stac_source |>
 A STAC _Collection_ exists to relate similar datasets together through space, time, and shared metadata. Each Sentinel mission and the downstream analysis-ready data are examples of STAC Collections. To browse STAC Collections, the `collections()` function is used. We can see that there are 11 collections available in the API, as well as information 
 
 ```{r collections}
-stac_collections <- stac_source %>%
-  collections() %>%
+stac_collections <- stac_source |>
+  collections() |>
   get_request()
 
 stac_collections
@@ -58,14 +58,14 @@ stac_collections
 The default printing of the `stac_collections()` object summarises what's been returned, but does not give all of the information. To see more about what's been returned, we can used `str()`.
 
 ```{r collections-obj-details}
-stac_collections %>%
+stac_collections |>
   str(max.level = 1)
 ```
 
 Here, we can see that there is an entry `"collections"` within `stac_collections`, which we access to return the collections themselves (using `head()` to only return a few). This shows additional details about each collection, such as the collection id, title, description, and additional fields in the collections.
 
 ```{r collections-details}
-stac_collections[["collections"]] %>%
+stac_collections[["collections"]] |>
   head(n = 3)
 ```
 
@@ -84,7 +84,7 @@ However, the best way to access a specific collection is to search for it direct
 The collection ID can be supplied directly in the `collections()` function. If we look at the query without getting the result, we can see that it has been formed using the `collection_id`, "sentinel-2-l2a", as a filter parameter.
 
 ```{r get-collection-by-id-query}
-sentinel_2_l2a_query <- stac_source %>%
+sentinel_2_l2a_query <- stac_source |>
   collections(collection_id = "sentinel-2-l2a")
 
 sentinel_2_l2a_query
@@ -93,7 +93,7 @@ sentinel_2_l2a_query
 And that running `get_request()` will return the collection itself:
 
 ```{r get-collection-by-id}
-sentinel_2_l2a_query %>%
+sentinel_2_l2a_query |>
   get_request()
 ```
 
@@ -105,20 +105,20 @@ An important thing to note with `rstac` is that you cannot continue to build que
 
 ```{r item-error}
 #| error: true
-sentinel_2_l2a_collection <- stac_source %>%
-  collections(collection_id = "sentinel-2-l2a") %>%
+sentinel_2_l2a_collection <- stac_source |>
+  collections(collection_id = "sentinel-2-l2a") |>
   get_request()
 
-sentinel_2_l2a_collection %>%
+sentinel_2_l2a_collection |>
   items()
 ```
 
 If you see this error --- `"Invalid rstac_query value"` --- ensure that you are running `get_request()` at the very end of your query building functions. Using `items()` this way, we can see that it returns a summary of the collection's items:
 
 ```{r get-items}
-sentinel_2_l2a_collection_items <- stac_source %>%
-  collections(collection_id = "sentinel-2-l2a") %>%
-  items() %>%
+sentinel_2_l2a_collection_items <- stac_source |>
+  collections(collection_id = "sentinel-2-l2a") |>
+  items() |>
   get_request()
 
 sentinel_2_l2a_collection_items
@@ -130,13 +130,13 @@ sentinel_2_l2a_collection_items
 
 ```{r items}
 # This just gets the first 10 items
-sentinel_2_l2a_collection_items %>%
+sentinel_2_l2a_collection_items |>
   items_length()
 
 # This can be changed with the `limit` argument in `items()`, but better to just search
-stac_source %>%
-  collections(collection_id = "sentinel-2-l2a") %>%
-  items(limit = 15) %>%
+stac_source |>
+  collections(collection_id = "sentinel-2-l2a") |>
+  items(limit = 15) |>
   get_request()
 ```
 
@@ -144,20 +144,20 @@ stac_source %>%
 # Use `stac_search()` to search for items in a collection based on a number of possible critera
 
 # Bounding box - in WGS84 latitude/longitude -> minimum longitude, minimum latitude, maximum longitude, maximum latitude
-stac_source %>%
+stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
     bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
-  ) %>%
+  ) |>
   get_request()
 
 # In theory... we can use `items_matched()` to see how many match in a search:
-stac_source %>%
+stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
     bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
-  ) %>%
-  get_request() %>%
+  ) |>
+  get_request() |>
   items_matched()
 # But: returns an integer value if the STAC web server does support this extension. Otherwise returns NULL.
 # Not supported here
@@ -173,26 +173,26 @@ stac_source %>%
 # Only features that have a datetime property that intersects the interval or date-time informed in datetime are selected.
 
 # 2024-01-01 to 2024-01-02
-stac_source %>%
+stac_source |>
   stac_search(
     collection = "sentinel-2-l2a",
     datetime = "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"
-  ) %>%
+  ) |>
   get_request()
 
 # Additional filters: instrument, platform
 # stac_search does not support all filters -> we can also use `ext_filter()`
-stac_source %>%
+stac_source |>
   ext_filter(
     collection == "sentinel-2-l2a" && `eo:cloud_cover` <= 10
-  ) %>%
+  ) |>
   get_request()
 
 # This isn't working:
-x <- stac_source %>%
+x <- stac_source |>
   ext_filter(
     collection == "sentinel-2-l2a" && instruments == "msi"
-  ) %>%
+  ) |>
   get_request()
 
 # I wonder if it's some sort of case sensitivity etc?
@@ -200,21 +200,21 @@ x
 
 # Combining filters
 # bbox and datetime
-stac_source %>%
+stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
     bbox = c(-47.02148, -17.35063, -42.53906, -12.98314),
     datetime = "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"
-  ) %>%
+  ) |>
   get_request()
 
 # bbox and cloud coverage -> combining stac_search() and ext_filter()
-stac_source %>%
+stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
     bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
-  ) %>%
-  ext_filter(`eo:cloud_cover` <= 40) %>%
+  ) |>
+  ext_filter(`eo:cloud_cover` <= 40) |>
   get_request()
 ```
 
@@ -223,11 +223,11 @@ stac_source %>%
 
 # (ID is available from the browser, click "Source" and copy it)
 # https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a/items/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203?.language=en
-example_item <- stac_source %>%
+example_item <- stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
     ids = "S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203"
-  ) %>%
+  ) |>
   get_request()
 
 example_item
@@ -235,20 +235,20 @@ example_item
 
 ```{r}
 # List the assets in an item
-example_item %>%
+example_item |>
   items_assets()
 ```
 
 ```{r}
 # Select specific assets
-example_item %>%
+example_item |>
   assets_select(asset_names = "AOT_10m")
 ```
 
 ```{r}
 # See its URL
-asset_url <- example_item %>%
-  assets_select(asset_names = "AOT_10m") %>%
+asset_url <- example_item |>
+  assets_select(asset_names = "AOT_10m") |>
   assets_url()
 
 asset_url
@@ -256,8 +256,8 @@ asset_url
 
 ```{r}
 # The "product" asset is what will be used in the Zarr tutorial
-example_item %>%
-  assets_select(asset_names = "product") %>%
+example_item |>
+  assets_select(asset_names = "product") |>
   assets_url()
 ```
 
