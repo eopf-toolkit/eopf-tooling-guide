@@ -1,6 +1,20 @@
 # EOPF STAC Metadata Access
 
 ## Table of Contents
+[Prerequisites](#prerequisites)<br />
+[Dependencies](#dependencies)<br />
+[Discover Zarr Assets](#discover-zarr-assets)<br />
+[Imports](#imports)<br />
+[Connect to the EOPF Sample Service STAC API](#connect-to-the-eopf-sample-service-stac-api)<br />
+[Browse Available Collections](#browse-available-collections)<br />
+[Search for Items](#search-for-items)<br />
+[Spatial Extent (Bounding Box)](#spatial-extent-bounding-box)<br />
+[Temporal Extent (Time Range)](#temporal-extent-time-range)<br />
+[Platform](#platform)<br />
+[Instruments](#instruments)<br />
+[Combined Search Criteria](#combined-search-criteria)<br />
+[STAC Item Metadata](#stac-item-metadata)<br />
+
 
 ## Prerequisites
 
