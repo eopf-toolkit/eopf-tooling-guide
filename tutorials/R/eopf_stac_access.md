@@ -188,7 +188,7 @@ browsable STAC catalog of the EOPF Sentinel Zarr Samples Service, on the
 collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a),
 under “Source.”
 
-![](images/eopf-stac-access-collections-id.png)
+<img src="images/eopf-stac-access-collections-id.png" width="800" />
 
 The collection ID can be supplied directly in the `collections()`
 function. If we look at the query without getting the result, we can see
@@ -767,7 +767,7 @@ on the [page for that
 item](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a/items/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203),
 under “Source”:
 
-![](images/eopf-stac-access-items-id.png)
+<img src="images/eopf-stac-access-items-id.png" width="800" />
 
 To select a single item, supply its ID in the `items()` function:
 
