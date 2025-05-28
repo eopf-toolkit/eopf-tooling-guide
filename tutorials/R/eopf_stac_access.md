@@ -85,8 +85,7 @@ A STAC *Collection* exists to relate similar data sets together through
 space, time, and shared metadata. Each Sentinel mission and the
 downstream analysis-ready data are examples of STAC Collections. To
 browse STAC Collections, the `collections()` function is used. We can
-see that there are 11 collections available in the API, as well as
-information
+see that there are 11 collections available in the API:
 
 ``` r
 stac_collections <- stac_source |>
@@ -113,7 +112,7 @@ stac_collections
 
 The default printing of the `stac_collections()` object summarises
 what’s been returned, but does not give all of the information. To see
-more about what’s been returned, we can used `str()`.
+more about what’s been returned, we use `str()`.
 
 ``` r
 stac_collections |>
@@ -182,11 +181,12 @@ stac_collections[["collections"]][[1]]
     id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
 
 However, the best way to access a specific collection is to search for
-it directly using the collection `id`. The `id`, “sentinel-2-l2a”, is
+it directly using the collection ID. The ID, “sentinel-2-l2a”, is
 visible in the Collection output above. It is also accessible in the
 browsable STAC catalog of the EOPF Sentinel Zarr Samples Service, on the
 [page for that
-collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a).
+collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a),
+under “Source.”
 
 <figure>
 <img src="images/eopf-stac-access-collections-id.png"
@@ -195,7 +195,7 @@ alt="Finding the collection ID in the STAC catalog" />
 catalog</figcaption>
 </figure>
 
-<br><br>
+<br>
 
 The collection ID can be supplied directly in the `collections()`
 function. If we look at the query without getting the result, we can see
@@ -253,6 +253,8 @@ sentinel_2_l2a_collection <- stac_source |>
 sentinel_2_l2a_collection |>
   items()
 ```
+
+    Error: Invalid rstac_query value.
 
 If you see this error — `"Invalid rstac_query value"` — ensure that you
 are running `get_request()` at the very end of your query building
@@ -316,7 +318,7 @@ stac_source |>
 ## Item properties
 
 We can look closer at individual items to see the metadata attached to
-them. Items are stores under `"features"`
+them. Items are stored under `"features"`:
 
 ``` r
 sentinel_2_l2a_collection_items[["features"]] |>
@@ -486,7 +488,7 @@ a specific date and time (which might be difficult to match exactly to
 an item’s time!). The date-time must be given in RFC 3339 format.
 
 To search for a closed interval, separate two date-times by a “/”,
-e.g. “2024-12-01T01:00:00Z/2024-12-01T05:00:00Z”:
+e.g. `"2024-12-01T01:00:00Z/2024-12-01T05:00:00Z"`:
 
 ``` r
 matching_timeframe_items <- stac_source |>
@@ -527,8 +529,8 @@ matching_timeframe_items |>
     [1] "2024-12-01T04:59:11.024000Z"
 
 To search by an open interval, “..” is used to indicate the open end,
-e.g. “../2024-01-01T23:00:00Z” representing prior to that date-time, and
-“2024-01-01T23:00:00Z/..” representing after it:
+e.g. `"../2024-01-01T23:00:00Z"` representing prior to that date-time,
+and `"2024-01-01T23:00:00Z/.."` representing after it:
 
 ``` r
 stac_source |>
@@ -563,12 +565,12 @@ items. We can also search using these properties. The `stac_search()`
 function is limited to properties like bounding box and time frame, so
 instead we use `ext_filter()`. This is a function that makes use of the
 Common Query Language (CQL2) filter extension, and allows us to do more
-complicated searching and querying using SQL-like language.
+complicated searching and querying using SQL-like language. It is also
+important to note that when using `ext_filter()`, we switch to using
+`post_request()` instead of `get_request()`.
 
 To search for items whose platform is “sentinel-2b”, for example, we use
-`==` to indicate equality. It is also important to note that when using
-`ext_filter()`, we switch to using `post_request()` instead of
-`get_request()`.
+`==` to indicate equality:
 
 ``` r
 sentinel_2b_platform_results <- stac_source |>
@@ -603,8 +605,8 @@ sentinel_2b_platform_results |>
 
     [1] "sentinel-2b"
 
-If the search value is contained in another variable, the value must be
-escaped in the search by using double curly braces:
+If the search value is contained in another variable, the variable must
+be escaped in the search by using double curly braces:
 
 ``` r
 search_platform <- "sentinel-2b"
@@ -639,8 +641,7 @@ stac_source |>
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-And to search for items with cloud cover of less than 40, we can use
-`<=`:
+And to search for items with cloud cover of less than 40, we use `<=`:
 
 ``` r
 stac_source |>
@@ -652,10 +653,10 @@ stac_source |>
 
     [1] 36.09757
 
-To search for items whose instrument is “msi”, we can use the
-`a_contains()`. We need to use this instead of `==` because
-`instruments` can contain multiple values, and `a_contains()` searches
-for the value `"msi"` within the list of values that is `instruments`.
+To search for items whose instrument is “msi”, we use the `a_contains()`
+function. We need to use this instead of `==` because `instruments` can
+contain multiple values, and `a_contains()` searches for the value
+`"msi"` within the list of values that is `instruments`.
 
 ``` r
 stac_source |>
@@ -669,13 +670,13 @@ stac_source |>
 
 Note that there is currently a bug with how the `rstac` package converts
 the API’s data to an R object. This bug makes it unclear that
-`instruments` is a list that needs to be searched within (instead of a
-single value). There is an issue to fix this bug in the `rstac` github
-repository.
+`instruments` is a *list* that needs to be searched within (instead of a
+single value). There is an [issue to fix this bug in the `rstac` github
+repository](https://github.com/brazil-data-cube/rstac/issues/175).
 
-If you are having trouble filtering by properties that look like single
-values, it is a good idea to look for the JSON specification of the
-property in the [STAC Specification
+If you are having trouble searching within properties that look like
+single values, it is a good idea to look for the JSON specification of
+the property in the [STAC Specification
 repository](github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json).
 For example, for the `instruments` property, we can look in the
 [intstrument.json](https://github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json)
@@ -700,17 +701,16 @@ file and see that it is an *array* (what is called a list in R), while
 
 The [documentation for
 `ext_filter()`](https://brazil-data-cube.github.io/rstac/reference/ext_filter.html#details)
-contains information on how to construct many more filters than we’ve
+contains information on how to construct many more searches than we’ve
 shown here.
 
 ### Combine search criteria
 
-Finally, you can combine many filter criteria by supplying them
-together. We have already seen how to combine multiple criteria
-(collection ID and bounding box, for example) in `stac_search()`, by
-using the named arguments. We can also filter by bounding box and
-datetime in the same way. Meanwhile, multiple criteria in `ext_filter()`
-are separated by `&&`:
+You can combine multiple filter criteria by specifying them together. We
+have already seen how to combine multiple criteria (collection ID and
+bounding box, for example) in `stac_search()` by using the named
+arguments. We can also filter by bounding box and datetime in the same
+way. Multiple criteria in `ext_filter()` are separated by `&&`:
 
 ``` r
 multiple_criteria_items <- stac_source |>
@@ -770,7 +770,9 @@ sentinel_2_l2a_collection_items[["features"]][[1]]
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
 Or through the STAC catalog of the EOPF Sentinel Zarr Samples Service,
-on the page for that item:
+on the [page for that
+item](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a/items/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203),
+under “Source”:
 
 <figure>
 <img src="images/eopf-stac-access-items-id.png"
@@ -779,7 +781,7 @@ alt="Finding the item ID in the STAC catalog" />
 catalog</figcaption>
 </figure>
 
-<br><br>
+<br>
 
 To select a single item, supply its ID in the `items()` function:
 

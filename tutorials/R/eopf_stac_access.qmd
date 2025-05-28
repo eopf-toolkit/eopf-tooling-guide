@@ -62,7 +62,7 @@ stac_source |>
 
 # Browse collections
 
-A STAC _Collection_ exists to relate similar data sets together through space, time, and shared metadata. Each Sentinel mission and the downstream analysis-ready data are examples of STAC Collections. To browse STAC Collections, the `collections()` function is used. We can see that there are 11 collections available in the API, as well as information 
+A STAC _Collection_ exists to relate similar data sets together through space, time, and shared metadata. Each Sentinel mission and the downstream analysis-ready data are examples of STAC Collections. To browse STAC Collections, the `collections()` function is used. We can see that there are 11 collections available in the API:
 
 ```{r collections}
 stac_collections <- stac_source |>
@@ -72,7 +72,7 @@ stac_collections <- stac_source |>
 stac_collections
 ```
 
-The default printing of the `stac_collections()` object summarises what's been returned, but does not give all of the information. To see more about what's been returned, we can used `str()`.
+The default printing of the `stac_collections()` object summarises what's been returned, but does not give all of the information. To see more about what's been returned, we use `str()`.
 
 ```{r collections-obj-details}
 stac_collections |>
@@ -92,7 +92,7 @@ The Sentinel-2 Level-2A collection can be accessed by getting the first entry in
 stac_collections[["collections"]][[1]]
 ```
 
-However, the best way to access a specific collection is to search for it directly using the collection `id`. The `id`, "sentinel-2-l2a", is visible in the Collection output above. It is also accessible in the browsable STAC catalog of the EOPF Sentinel Zarr Samples Service, on the [page for that collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a).
+However, the best way to access a specific collection is to search for it directly using the collection ID. The ID, "sentinel-2-l2a", is visible in the Collection output above. It is also accessible in the browsable STAC catalog of the EOPF Sentinel Zarr Samples Service, on the [page for that collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a), under "Source."
 
 ![Finding the collection ID in the STAC catalog](images/eopf-stac-access-collections-id.png)
 
@@ -120,7 +120,7 @@ Within collections, there are _items_. Items are the building blocks for STAC. A
 
 An important thing to note with `rstac` is that you cannot continue to build queries on top of ones that have already had their results returned (via `get_request()`). It may make sense for a typical workflow in R to "get" the collection, then to try to get the items from it, but this will produce an error:
 
-```{r item-error, eval = FALSE}
+```{r item-error}
 #| error: true
 sentinel_2_l2a_collection <- stac_source |>
   collections(collection_id = "sentinel-2-l2a") |>
@@ -152,7 +152,7 @@ stac_source |>
 
 ## Item properties
 
-We can look closer at individual items to see the metadata attached to them. Items are stores under `"features"`
+We can look closer at individual items to see the metadata attached to them. Items are stored under `"features"`:
 
 ```{r items-features}
 sentinel_2_l2a_collection_items[["features"]] |>
@@ -220,7 +220,7 @@ This does -- again by default -- return the first 10 items, but the number retur
 
 When searching for a specific time frame, items that have a datetime property that _intersects_ with the given time frame will be returned. It's therefore best to search for a closed or open interval, rather than a specific date and time (which might be difficult to match exactly to an item's time!). The date-time must be given in RFC 3339 format.
 
-To search for a closed interval, separate two date-times by a "/", e.g. "2024-12-01T01:00:00Z/2024-12-01T05:00:00Z":
+To search for a closed interval, separate two date-times by a "/", e.g. `"2024-12-01T01:00:00Z/2024-12-01T05:00:00Z"`:
 
 ```{r search-items-datetime-closed-interval}
 matching_timeframe_items <- stac_source |>
@@ -240,7 +240,7 @@ matching_timeframe_items |>
   get_first_item_property("datetime")
 ```
 
-To search by an open interval, ".." is used to indicate the open end, e.g. "../2024-01-01T23:00:00Z" representing prior to that date-time, and "2024-01-01T23:00:00Z/.." representing after it:
+To search by an open interval, ".." is used to indicate the open end, e.g. `"../2024-01-01T23:00:00Z"` representing prior to that date-time, and `"2024-01-01T23:00:00Z/.."` representing after it:
 
 ```{r search-items-datetime-open-interval}
 stac_source |>
@@ -253,9 +253,9 @@ stac_source |>
 
 ### Search by other item properties
 
-As shown above, there are a number of other properties attached to STAC items. We can also search using these properties. The `stac_search()` function is limited to properties like bounding box and time frame, so instead we use `ext_filter()`. This is a function that makes use of the Common Query Language (CQL2) filter extension, and allows us to do more complicated searching and querying using SQL-like language. 
+As shown above, there are a number of other properties attached to STAC items. We can also search using these properties. The `stac_search()` function is limited to properties like bounding box and time frame, so instead we use `ext_filter()`. This is a function that makes use of the Common Query Language (CQL2) filter extension, and allows us to do more complicated searching and querying using SQL-like language. It is also important to note that when using `ext_filter()`, we switch to using `post_request()` instead of `get_request()`.
 
-To search for items whose platform is "sentinel-2b", for example, we use `==` to indicate equality. It is also important to note that when using `ext_filter()`, we switch to using `post_request()` instead of `get_request()`.
+To search for items whose platform is "sentinel-2b", for example, we use `==` to indicate equality:
 
 ```{r search-items-extfilter}
 sentinel_2b_platform_results <- stac_source |>
@@ -269,7 +269,7 @@ sentinel_2b_platform_results |>
   get_first_item_property("platform")
 ```
 
-If the search value is contained in another variable, the value must be escaped in the search by using double curly braces:
+If the search value is contained in another variable, the variable must be escaped in the search by using double curly braces:
 
 ```{r search-items-extfilter-variable}
 search_platform <- "sentinel-2b"
@@ -292,7 +292,7 @@ stac_source |>
   post_request()
 ```
 
-And to search for items with cloud cover of less than 40, we can use `<=`:
+And to search for items with cloud cover of less than 40, we use `<=`:
 
 ```{r search-items-extfilter-cloudcover}
 stac_source |>
@@ -302,7 +302,7 @@ stac_source |>
   get_first_item_property("eo:cloud_cover")
 ```
 
-To search for items whose instrument is "msi", we can use the `a_contains()`. We need to use this instead of `==` because `instruments` can contain multiple values, and `a_contains()` searches for the value `"msi"` within the list of values that is `instruments`.
+To search for items whose instrument is "msi", we use the `a_contains()` function. We need to use this instead of `==` because `instruments` can contain multiple values, and `a_contains()` searches for the value `"msi"` within the list of values that is `instruments`.
 
 ```{r search-items-extfilter-instruments}
 stac_source |>
@@ -312,9 +312,9 @@ stac_source |>
   get_first_item_property("instruments")
 ```
 
-Note that there is currently a bug with how the `rstac` package converts the API's data to an R object. This bug makes it unclear that `instruments` is a list that needs to be searched within (instead of a single value). There is an issue to fix this bug in the `rstac` github repository.
+Note that there is currently a bug with how the `rstac` package converts the API's data to an R object. This bug makes it unclear that `instruments` is a _list_ that needs to be searched within (instead of a single value). There is an [issue to fix this bug in the `rstac` github repository](https://github.com/brazil-data-cube/rstac/issues/175).
 
-If you are having trouble filtering by properties that look like single values, it is a good idea to look for the JSON specification of the property in the [STAC Specification repository](github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json). For example, for the `instruments` property, we can look in the [intstrument.json](https://github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json) file and see that it is an _array_ (what is called a list in R), while `platform` is just a string.
+If you are having trouble searching within properties that look like single values, it is a good idea to look for the JSON specification of the property in the [STAC Specification repository](github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json). For example, for the `instruments` property, we can look in the [intstrument.json](https://github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json) file and see that it is an _array_ (what is called a list in R), while `platform` is just a string.
 
 ```json
 "properties": {
@@ -332,12 +332,11 @@ If you are having trouble filtering by properties that look like single values, 
 }
 ```
 
-
-The [documentation for `ext_filter()`](https://brazil-data-cube.github.io/rstac/reference/ext_filter.html#details) contains information on how to construct many more filters than we've shown here.
+The [documentation for `ext_filter()`](https://brazil-data-cube.github.io/rstac/reference/ext_filter.html#details) contains information on how to construct many more searches than we've shown here.
 
 ### Combine search criteria
 
-Finally, you can combine many filter criteria by supplying them together. We have already seen how to combine multiple criteria (collection ID and bounding box, for example) in `stac_search()`, by using the named arguments. We can also filter by bounding box and datetime in the same way. Meanwhile, multiple criteria in `ext_filter()` are separated by `&&`:
+You can combine multiple filter criteria by specifying them together. We have already seen how to combine multiple criteria (collection ID and bounding box, for example) in `stac_search()` by using the named arguments. We can also filter by bounding box and datetime in the same way. Multiple criteria in `ext_filter()` are separated by `&&`:
 
 ```{r search-items-multiple-criteria}
 multiple_criteria_items <- stac_source |>
@@ -372,7 +371,7 @@ We will look at the assets for a specific item from the Sentinel-2 Level-2A coll
 sentinel_2_l2a_collection_items[["features"]][[1]]
 ```
 
-Or through the STAC catalog of the EOPF Sentinel Zarr Samples Service, on the page for that item:
+Or through the STAC catalog of the EOPF Sentinel Zarr Samples Service, on the [page for that item](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a/items/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203), under "Source":
 
 ![Finding the item ID in the STAC catalog](images/eopf-stac-access-items-id.png)
 
