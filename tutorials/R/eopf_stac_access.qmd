@@ -1,18 +1,31 @@
 ---
 title: "How to for the EOPF Sample Service STAC catalog"
-format:
-  html:
-    toc: true
-    toc-depth: 3
-    toc-location: left
-    toc-expand: true
+format: md
 execute:
-  cache: true
+    cache: true
 ---
+
+# Table of Contents
+
+- [Introduction](#introduction)
+- [Prerequisites](#prerequisites)
+  - [Dependencies](#dependencies)
+- [Connect to the EOPF Sample Service STAC API](#connect-to-the-eopf-sample-service-stac-api)
+- [Browse collections](#browse-collections)
+- [Browse items](#browse-items)
+  - [Item properties](#item-properties)
+  - [Search for items](#search-for-items)
+    - [Search by a bounding box](#search-by-a-bounding-box)
+    - [Search by a time frame](#search-by-a-time-frame)
+    - [Search by other item properties](#search-by-other-item-properties)
+    - [Combine search criteria](#combine-search-criteria)
+- [Browse assets](#browse-assets)
 
 # Introduction
 
-This tutorial will explore how to access the [EOPF Sample Service STAC catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using R. 
+This tutorial will explore how to access the [EOPF Sample Service STAC catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using R.
+
+TODO - include the content in https://github.com/eopf-toolkit/eopf-tooling-guide/blob/EOPF-47/docs/tutorials/stac_zarr.md? Link to it?
 
 # Prerequisites
 
@@ -34,9 +47,7 @@ Then load the package into your environment:
 library(rstac)
 ```
 
-# Exploring the EOPF Sample Service STAC catalog
-
-# Setting up the API
+# Connect to the EOPF Sample Service STAC API
 
 To access the EOPF Sample Service STAC catalog in R, we need to give the URL of the STAC API source ([https://stac.core.eopf.eodc.eu/](https://stac.core.eopf.eodc.eu/)) using the function `stac()`.
  
@@ -49,7 +60,7 @@ stac_source |>
   get_request()
 ```
 
-# Collections
+# Browse collections
 
 A STAC _Collection_ exists to relate similar data sets together through space, time, and shared metadata. Each Sentinel mission and the downstream analysis-ready data are examples of STAC Collections. To browse STAC Collections, the `collections()` function is used. We can see that there are 11 collections available in the API, as well as information 
 
@@ -81,11 +92,9 @@ The Sentinel-2 Level-2A collection can be accessed by getting the first entry in
 stac_collections[["collections"]][[1]]
 ```
 
-However, the best way to access a specific collection is to search for it directly using the collection `id`. The `id`, "sentinel-2-l2a", is visible in the Collection output above. It is also accessible in the browsable STAC catalog of the EOPF Sentinel Zarr Samples Service, on the page for that collection ([https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a))
+However, the best way to access a specific collection is to search for it directly using the collection `id`. The `id`, "sentinel-2-l2a", is visible in the Collection output above. It is also accessible in the browsable STAC catalog of the EOPF Sentinel Zarr Samples Service, on the [page for that collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a).
 
 ![Finding the collection ID in the STAC catalog](images/eopf-stac-access-collections-id.png)
-
-(TODO -> consistent way of "highlighting" sections of pages)
 
 The collection ID can be supplied directly in the `collections()` function. If we look at the query without getting the result, we can see that it has been formed using the `collection_id`, "sentinel-2-l2a", as a filter parameter.
 
@@ -103,7 +112,7 @@ sentinel_2_l2a_query |>
   get_request()
 ```
 
-# Items
+# Browse items
 
 Within collections, there are _items_. Items are the building blocks for STAC. At their core, they are GeoJSON data, along with additional metadata which ensures data provenance is maintained and specific data attributes are captured. A single capture from a Sentinel mission is an example of a STAC item. To get an overview of items within a collection, the `items()` function is used. 
 
@@ -144,7 +153,7 @@ stac_source |>
 We can look closer at individual items to see the metadata attached to them. Items are stores under `"features"`
 
 ```{r items-features}
-sentinel_2_l2a_collection_items[["features"]] %>%
+sentinel_2_l2a_collection_items[["features"]] |>
   head(n = 2)
 ```
 
@@ -156,16 +165,16 @@ sentinel_2_l2a_first_item <- sentinel_2_l2a_collection_items[["features"]][[1]]
 sentinel_2_l2a_first_item[["bbox"]]
 ```
 
-And many more additional properties:
-
-With their properties under `"properties"` in an individual item.
+And many more additional properties, with their properties under `"properties"` in an individual item.
 
 ```{r item-properties}
-sentinel_2_l2a_first_item[["properties"]] %>%
+sentinel_2_l2a_first_item[["properties"]] |>
   names()
 ```
 
-TODO: link to this table (or include it here as well?) https://github.com/eopf-toolkit/eopf-tooling-guide/blob/EOPF-47/docs/tutorials/stac_zarr.md#eopf-and-stac-extensions to better explain item properties
+The introductory tutorial [further explains the metadata properties](https://github.com/eopf-toolkit/eopf-tooling-guide/blob/EOPF-47/docs/tutorials/stac_zarr.md#eopf-and-stac-extensions) and their extensions.
+
+(TODO -- link on main branch once EOPF-47 is merged)
 
 For example, the EOPF instrument mode:
 
@@ -180,15 +189,15 @@ get_first_item_property <- function(search_results, property) {
   search_results[["features"]][[1]][["properties"]][[property]]
 }
 
-sentinel_2_l2a_collection_items %>%
+sentinel_2_l2a_collection_items |>
   get_first_item_property("eopf:instrument_mode")
 ```
 
-## Searching for items
+## Search for items
 
 If the goal is to access data from a specific mission, it is best to _search_ within a collection's items, using some of the properties explored above. It's possible to search based on a number of criteria, including a bounding box, time frame, and other mission properties.
 
-### Searching by a bounding box
+### Search by a bounding box
 
 To narrow down items based on a bounding box or time frame, the `stac_search()` function is used. The collection ID is provided in the `collections()` argument, and bounding box and time frame are `bbox` and `datetime`, respectively.
 
@@ -205,7 +214,7 @@ stac_source |>
 
 This does -- again by default -- return the first 10 items, but the number returned can be increased via the `limit` argument in `stac_search()`.
 
-### Searching by a time frame
+### Search by a time frame
 
 When searching for a specific time frame, items that have a datetime property that _intersects_ with the given time frame will be returned. It's therefore best to search for a closed or open interval, rather than a specific date and time (which might be difficult to match exactly to an item's time!). The date-time must be given in RFC 3339 format.
 
@@ -225,7 +234,7 @@ matching_timeframe_items
 We can access the matching item's `datetime` property to see that it falls within the specified interval:
 
 ```{r search-items-datetime-closed-interval-examine-property}
-matching_timeframe_items %>%
+matching_timeframe_items |>
   get_first_item_property("datetime")
 ```
 
@@ -240,21 +249,21 @@ stac_source |>
   get_request()
 ```
 
-### Searching by other item properties
+### Search by other item properties
 
-As shown above, there are a number of other properties attached to STAC items. We can also search using these properties. The `stac_search()` function is limited to properties like bounding box and time frame, so instead we use `ext_filter()`. This is a function that makes use of the Common Query Language (CQL2) filter extension, and allows us to do more complicated searching and querying using SQL-like language.
+As shown above, there are a number of other properties attached to STAC items. We can also search using these properties. The `stac_search()` function is limited to properties like bounding box and time frame, so instead we use `ext_filter()`. This is a function that makes use of the Common Query Language (CQL2) filter extension, and allows us to do more complicated searching and querying using SQL-like language. 
 
-To search for items whose platform is "sentinel-2b", for example, we use `==` to indicate equality:
+To search for items whose platform is "sentinel-2b", for example, we use `==` to indicate equality. It is also important to note that when using `ext_filter()`, we switch to using `post_request()` instead of `get_request()`.
 
 ```{r search-items-extfilter}
-sentinel_2b_platform_results <- stac_source %>%
-  stac_search(collections = "sentinel-2-l2a") %>%
-  ext_filter(platform == "sentinel-2b") %>%
-  get_request()
+sentinel_2b_platform_results <- stac_source |>
+  stac_search(collections = "sentinel-2-l2a") |>
+  ext_filter(platform == "sentinel-2b") |>
+  post_request()
 
 sentinel_2b_platform_results
 
-sentinel_2b_platform_results %>%
+sentinel_2b_platform_results |>
   get_first_item_property("platform")
 ```
 
@@ -263,78 +272,95 @@ If the search value is contained in another variable, the value must be escaped 
 ```{r search-items-extfilter-variable}
 search_platform <- "sentinel-2b"
 
-sentinel_2b_platform_results <- stac_source %>%
-  stac_search(collections = "sentinel-2-l2a") %>%
-  ext_filter(platform == {{ search_platform }}) %>%
-  get_request()
+sentinel_2b_platform_results <- stac_source |>
+  stac_search(collections = "sentinel-2-l2a") |>
+  ext_filter(platform == {{ search_platform }}) |>
+  post_request()
 
-sentinel_2b_platform_results %>%
+sentinel_2b_platform_results |>
   get_first_item_property("platform")
 ```
 
 Note also that there is no `limit` argument in `ext_filter()`. To limit the number of items returned, the limit is supplied in `stac_search()` beforehand, since these search functions build upon one another:
 
 ```{r search-items-extfilter-limit}
-stac_source %>%
-  stac_search(collections = "sentinel-2-l2a", limit = 1) %>%
-  ext_filter(platform == {{ search_platform }}) %>%
-  get_request()
+stac_source |>
+  stac_search(collections = "sentinel-2-l2a", limit = 1) |>
+  ext_filter(platform == {{ search_platform }}) |>
+  post_request()
 ```
 
-To search for items whose instrument contains "msi", we can use the `%like%` operator:
-
-```{r}
-stac_source %>%
-  stac_search(collections = "sentinel-2-l2a") %>%
-  ext_filter(instruments %like% "%msi%") %>%
-  get_request() %>%
-  get_first_item_property("instruments")
-```
-
-TODO: contains instead of like?
-
-TODO: Note, it is not clear here that we are doing this because "instruments" is actually an array, not a string. I need to open an issue with Rarr around the auto unboxing behaviour, because it is not clear *why* using `==` does not work. Or, I need to figure out how to link the appropriate documentation to look up what "type" a property is.
-
-And to search for items with cloud cover of less than 40, we can use `<=`"
+And to search for items with cloud cover of less than 40, we can use `<=`:
 
 ```{r search-items-extfilter-cloudcover}
-stac_source %>%
-  stac_search(collections = "sentinel-2-l2a") %>%
+stac_source |>
+  stac_search(collections = "sentinel-2-l2a") |>
   ext_filter(`eo:cloud_cover` <= 40) |>
-  get_request() %>%
+  post_request() |>
   get_first_item_property("eo:cloud_cover")
 ```
 
+To search for items whose instrument is "msi", we can use the `a_contains()`. We need to use this instead of `==` because `instruments` can contain multiple values, and `a_contains()` searches for the value `"msi"` within the list of values that is `instruments`.
+
+```{r search-items-extfilter-instruments}
+stac_source |>
+  stac_search(collections = "sentinel-2-l2a") |>
+  ext_filter(a_contains(instruments, "msi")) |>
+  post_request() |>
+  get_first_item_property("instruments")
+```
+
+Note that there is currently a bug with how the `rstac` package converts the API's data to an R object. This bug makes it unclear that `instruments` is a list that needs to be searched within (instead of a single value). There is an issue to fix this bug in the `rstac` github repository.
+
+If you are having trouble filtering by properties that look like single values, it is a good idea to look for the JSON specification of the property in the [STAC Specification repository](github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json). For example, for the `instruments` property, we can look in the [intstrument.json](https://github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json) file and see that it is an _array_ (what is called a list in R), while `platform` is just a string.
+
+```json
+"properties": {
+    "platform": {
+      "title": "Platform",
+      "type": "string"
+    },
+    "instruments": {
+      "title": "Instruments",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+}
+```
+
+
 The [documentation for `ext_filter()`](https://brazil-data-cube.github.io/rstac/reference/ext_filter.html#details) contains information on how to construct many more filters than we've shown here.
 
-### Combining filter criteria
+### Combine search criteria
 
-Finally, you can combine many filter criteria by supplying them together. We have already seen how to combine multiple criteria (collection ID and bounding box, for example) in `stac_search()`, by using the named arguments. We can also filter by bounding box and datetime in the sameway. Meanwhile, multiple criteria in `ext_filter()` are separated by `&&`:
+Finally, you can combine many filter criteria by supplying them together. We have already seen how to combine multiple criteria (collection ID and bounding box, for example) in `stac_search()`, by using the named arguments. We can also filter by bounding box and datetime in the same way. Meanwhile, multiple criteria in `ext_filter()` are separated by `&&`:
 
 ```{r search-items-multiple-criteria}
-multiple_criteria_items <- stac_source %>%
+multiple_criteria_items <- stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
     bbox = c(-47.02148, -17.35063, -42.53906, -12.98314),
     datetime = "../2025-01-01T23:00:00Z"
-  ) %>%
+  ) |>
   ext_filter(
     platform == "sentinel-2a" &&
     `eo:cloud_cover` <= 40
-  ) %>%
-  get_request()
+  ) |>
+  post_request()
 
-multiple_criteria_items %>%
+multiple_criteria_items |>
   get_first_item_property("datetime")
 
-multiple_criteria_items %>%
+multiple_criteria_items |>
   get_first_item_property("platform")
 
-multiple_criteria_items %>%
+multiple_criteria_items |>
   get_first_item_property("eo:cloud_cover")
 ```
 
-# Assets
+# Browse assets
 
 Finally, assets fall under STAC items and direct users to the actual data itself. Each asset refers to data associated with the Item that can be downloaded or streamed.
 
@@ -348,12 +374,12 @@ Or through the STAC catalog of the EOPF Sentinel Zarr Samples Service, on the pa
 
 ![Finding the item ID in the STAC catalog](images/eopf-stac-access-items-id.png)
 
-To select a single item, use `items()`:
+To select a single item, supply its ID in the `items()` function:
 
 ```{r select-item}
 example_item <- stac_source |>
-  collections("sentinel-2-l2a") %>%
-  items("S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203") %>%
+  collections("sentinel-2-l2a") |>
+  items("S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203") |>
   get_request()
 
 example_item
@@ -384,4 +410,4 @@ example_item |>
   assets_url()
 ```
 
-This leads into our next tutorial (TODO: link), where this asset and URL will be used to access and work with Zarr data. 
+This leads into our next tutorial, where this asset and URL will be used to access and work with Zarr data. 

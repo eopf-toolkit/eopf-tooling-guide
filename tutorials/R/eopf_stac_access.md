@@ -1,27 +1,47 @@
 # How to for the EOPF Sample Service STAC catalog
 
 
-## Table of Contents
+# Table of Contents
 
-## Introduction
+-   [Introduction](#introduction)
+-   [Prerequisites](#prerequisites)
+    -   [Dependencies](#dependencies)
+-   [Connect to the EOPF Sample Service STAC
+    API](#connect-to-the-eopf-sample-service-stac-api)
+-   [Browse collections](#browse-collections)
+-   [Browse items](#browse-items)
+    -   [Item properties](#item-properties)
+    -   [Search for items](#search-for-items)
+        -   [Search by a bounding box](#search-by-a-bounding-box)
+        -   [Search by a time frame](#search-by-a-time-frame)
+        -   [Search by other item
+            properties](#search-by-other-item-properties)
+        -   [Combine search criteria](#combine-search-criteria)
+-   [Browse assets](#browse-assets)
+
+# Introduction
 
 This tutorial will explore how to access the [EOPF Sample Service STAC
-catalog](https://stac.browser.user.eopf.eodc.eu/) programatically using
+catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using
 R.
 
-## Prerequisites
+TODO - include the content in
+https://github.com/eopf-toolkit/eopf-tooling-guide/blob/EOPF-47/docs/tutorials/stac_zarr.md?
+Link to it?
+
+# Prerequisites
 
 An R environment is required to follow this tutorial, with R version \>=
 4.1.0. We recommend using either
 [RStudio](https://posit.co/download/rstudio-desktop/) or
-[Positron](https://posit.co/products/ide/positron/), and making use of
-[RStudio
+[Positron](https://posit.co/products/ide/positron/) (or a cloud
+computing environment) and making use of [RStudio
 projects](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects)
 for a self-contained coding environment.
 
-### Dependencies
+## Dependencies
 
-The `rstatc` package is required to follow this toturial. You can
+The `rstatc` package is required to follow this tutorial. You can
 install it directly from CRAN:
 
 ``` r
@@ -34,9 +54,7 @@ Then load the package into your environment:
 library(rstac)
 ```
 
-## Exploring the EOPF Sample Service STAC catalog
-
-### Setting up the API
+# Connect to the EOPF Sample Service STAC API
 
 To access the EOPF Sample Service STAC catalog in R, we need to give the
 URL of the STAC API source (<https://stac.core.eopf.eodc.eu/>) using the
@@ -45,7 +63,7 @@ function `stac()`.
 The object `stac_source` is a query containing information used *to*
 connect to the API, but it does not actually make any requests. To make
 requests to the API, we will always need to use `get_request()` or
-`put_request()`, as appropriate. running `get_request()` on
+`put_request()`, as appropriate. Running `get_request()` on
 `stac_source` actually retrieves the catalogue:
 
 ``` r
@@ -61,9 +79,9 @@ stac_source |>
     - field(s): 
     type, id, title, description, stac_version, conformsTo, links, stac_extensions
 
-### Collections
+# Browse collections
 
-A STAC *Collection* exists to relate similar datasets together through
+A STAC *Collection* exists to relate similar data sets together through
 space, time, and shared metadata. Each Sentinel mission and the
 downstream analysis-ready data are examples of STAC Collections. To
 browse STAC Collections, the `collections()` function is used. We can
@@ -148,8 +166,8 @@ stac_collections[["collections"]] |>
     - field(s): 
     id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
 
-The Sentinel-2 Level-2A can be accessed by getting the first entry in
-`stac_collections()[["collections"]]`
+The Sentinel-2 Level-2A collection can be accessed by getting the first
+entry in `stac_collections()[["collections"]]`
 
 ``` r
 stac_collections[["collections"]][[1]]
@@ -167,8 +185,8 @@ However, the best way to access a specific collection is to search for
 it directly using the collection `id`. The `id`, “sentinel-2-l2a”, is
 visible in the Collection output above. It is also accessible in the
 browsable STAC catalog of the EOPF Sentinel Zarr Samples Service, on the
-page for that collection
-(<https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a>)
+[page for that
+collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a).
 
 <figure>
 <img src="images/eopf-stac-access-collections-id.png"
@@ -176,8 +194,6 @@ alt="Finding the collection ID in the STAC catalog" />
 <figcaption aria-hidden="true">Finding the collection ID in the STAC
 catalog</figcaption>
 </figure>
-
-(TODO -\> consistent way of “highlighting” sections of pages)
 
 The collection ID can be supplied directly in the `collections()`
 function. If we look at the query without getting the result, we can see
@@ -212,7 +228,7 @@ sentinel_2_l2a_query |>
     - field(s): 
     id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
 
-## Items
+# Browse items
 
 Within collections, there are *items*. Items are the building blocks for
 STAC. At their core, they are GeoJSON data, along with additional
@@ -236,8 +252,6 @@ sentinel_2_l2a_collection |>
   items()
 ```
 
-    Error: Invalid rstac_query value.
-
 If you see this error — `"Invalid rstac_query value"` — ensure that you
 are running `get_request()` at the very end of your query building
 functions. Using `items()` this way, we can see that it returns a
@@ -254,67 +268,185 @@ sentinel_2_l2a_collection_items
 
     ###Items
     - features (10 item(s)):
-      - S2B_MSIL2A_20250525T192909_N0511_R142_T09UXB_20250525T231223
-      - S2B_MSIL2A_20250525T174909_N0511_R141_T15WVR_20250525T213946
-      - S2B_MSIL2A_20250525T174909_N0511_R141_T13SDU_20250525T215302
-      - S2A_MSIL2A_20250525T130311_N0511_R038_T27VXK_20250525T183014
-      - S2B_MSIL2A_20250525T110619_N0511_R137_T30TTM_20250525T133604
-      - S2C_MSIL2A_20250525T101621_N0511_R065_T36WVD_20250525T153015
-      - S2C_MSIL2A_20250525T101621_N0511_R065_T34WDU_20250525T153015
-      - S2C_MSIL2A_20250525T101621_N0511_R065_T32TLS_20250525T153015
-      - S2A_MSIL2A_20250525T094051_N0511_R036_T32PQC_20250526T092812
-      - S2B_MSIL2A_20250525T093039_N0511_R136_T35VNG_20250525T125314
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VNE_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VND_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VNC_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VME_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VMD_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VMC_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLF_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLE_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLD_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLC_20250526T222916
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-------------------------------------------------------------------------
-
-(wip after here)
-
-``` r
-# This just gets the first 10 items
-sentinel_2_l2a_collection_items |>
-  items_length()
-```
-
-    [1] 10
+The first 10 items are returned. This number can be changed via the
+`limit` argument in `items()`
 
 ``` r
-# This can be changed with the `limit` argument in `items()`, but better to just search
 stac_source |>
   collections(collection_id = "sentinel-2-l2a") |>
-  items(limit = 15) |>
+  items(limit = 20) |>
   get_request()
 ```
 
     ###Items
-    - features (15 item(s)):
-      - S2B_MSIL2A_20250525T192909_N0511_R142_T09UXB_20250525T231223
-      - S2B_MSIL2A_20250525T174909_N0511_R141_T15WVR_20250525T213946
-      - S2B_MSIL2A_20250525T174909_N0511_R141_T13SDU_20250525T215302
-      - S2A_MSIL2A_20250525T130311_N0511_R038_T27VXK_20250525T183014
-      - S2B_MSIL2A_20250525T110619_N0511_R137_T30TTM_20250525T133604
-      - S2C_MSIL2A_20250525T101621_N0511_R065_T36WVD_20250525T153015
-      - S2C_MSIL2A_20250525T101621_N0511_R065_T34WDU_20250525T153015
-      - S2C_MSIL2A_20250525T101621_N0511_R065_T32TLS_20250525T153015
-      - S2A_MSIL2A_20250525T094051_N0511_R036_T32PQC_20250526T092812
-      - S2B_MSIL2A_20250525T093039_N0511_R136_T35VNG_20250525T125314
-      - S2C_MSIL2A_20250524T210941_N0511_R057_T04QHG_20250525T005113
-      - S2C_MSIL2A_20250524T205041_N0511_R057_T09WWT_20250525T013812
-      - S2B_MSIL2A_20250524T195859_N0511_R128_T08UNG_20250524T231252
-      - S2B_MSIL2A_20250524T195859_N0511_R128_T08UNE_20250524T231252
-      - S2C_MSIL2A_20250524T190931_N0511_R056_T13WDT_20250525T004619
+    - features (20 item(s)):
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VNE_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VND_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VNC_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VME_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VMD_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VMC_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLF_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLE_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLD_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLC_20250526T222916
+      - ... with 10 more feature(s).
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-``` r
-# Use `stac_search()` to search for items in a collection based on a number of possible critera
+## Item properties
 
-# Bounding box - in WGS84 latitude/longitude -> minimum longitude, minimum latitude, maximum longitude, maximum latitude
+We can look closer at individual items to see the metadata attached to
+them. Items are stores under `"features"`
+
+``` r
+sentinel_2_l2a_collection_items[["features"]] |>
+  head(n = 2)
+```
+
+    [[1]]
+    ###Item
+    - id: S2A_MSIL2A_20250526T191831_N0511_R056_T11VNE_20250526T222916
+    - collection: sentinel-2-l2a
+    - bbox: xmin: -117.00034, ymin: 57.64582, xmax: -115.71974, ymax: 58.05726
+    - datetime: 2025-05-26T19:18:31.024000Z
+    - assets: 
+    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+    [[2]]
+    ###Item
+    - id: S2A_MSIL2A_20250526T191831_N0511_R056_T11VND_20250526T222916
+    - collection: sentinel-2-l2a
+    - bbox: xmin: -117.00034, ymin: 56.75175, xmax: -115.75287, ymax: 57.74230
+    - datetime: 2025-05-26T19:18:31.024000Z
+    - assets: 
+    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+And an individual item contains a lot of information, such as its
+bounding box:
+
+``` r
+sentinel_2_l2a_first_item <- sentinel_2_l2a_collection_items[["features"]][[1]]
+
+sentinel_2_l2a_first_item[["bbox"]]
+```
+
+    [1] -117.00034   57.64582 -115.71974   58.05726
+
+And many more additional properties, with their properties under
+`"properties"` in an individual item.
+
+``` r
+sentinel_2_l2a_first_item[["properties"]] |>
+  names()
+```
+
+     [1] "gsd"                                  
+     [2] "created"                              
+     [3] "mission"                              
+     [4] "sci:doi"                              
+     [5] "updated"                              
+     [6] "datetime"                             
+     [7] "platform"                             
+     [8] "grid:code"                            
+     [9] "proj:bbox"                            
+    [10] "proj:code"                            
+    [11] "providers"                            
+    [12] "published"                            
+    [13] "instruments"                          
+    [14] "end_datetime"                         
+    [15] "product:type"                         
+    [16] "constellation"                        
+    [17] "eo:snow_cover"                        
+    [18] "mgrs:utm_zone"                        
+    [19] "proj:centroid"                        
+    [20] "eo:cloud_cover"                       
+    [21] "start_datetime"                       
+    [22] "sat:orbit_state"                      
+    [23] "eopf:datatake_id"                     
+    [24] "mgrs:grid_square"                     
+    [25] "processing:level"                     
+    [26] "view:sun_azimuth"                     
+    [27] "mgrs:latitude_band"                   
+    [28] "processing:lineage"                   
+    [29] "product:timeliness"                   
+    [30] "sat:absolute_orbit"                   
+    [31] "sat:relative_orbit"                   
+    [32] "view:sun_elevation"                   
+    [33] "processing:facility"                  
+    [34] "processing:software"                  
+    [35] "eopf:instrument_mode"                 
+    [36] "product:timeliness_category"          
+    [37] "sat:platform_international_designator"
+
+The introductory tutorial [further explains the metadata
+properties](https://github.com/eopf-toolkit/eopf-tooling-guide/blob/EOPF-47/docs/tutorials/stac_zarr.md#eopf-and-stac-extensions)
+and their extensions.
+
+(TODO – link on main branch once EOPF-47 is merged)
+
+For example, the EOPF instrument mode:
+
+``` r
+sentinel_2_l2a_first_item[["properties"]][["eopf:instrument_mode"]]
+```
+
+    [1] "INS-NOBS"
+
+For the rest of the tutorial, we will use a small helper function that
+accesses a given property for the *first* item returned in a search.
+
+``` r
+get_first_item_property <- function(search_results, property) {
+  search_results[["features"]][[1]][["properties"]][[property]]
+}
+
+sentinel_2_l2a_collection_items |>
+  get_first_item_property("eopf:instrument_mode")
+```
+
+    [1] "INS-NOBS"
+
+## Search for items
+
+If the goal is to access data from a specific mission, it is best to
+*search* within a collection’s items, using some of the properties
+explored above. It’s possible to search based on a number of criteria,
+including a bounding box, time frame, and other mission properties.
+
+### Search by a bounding box
+
+To narrow down items based on a bounding box or time frame, the
+`stac_search()` function is used. The collection ID is provided in the
+`collections()` argument, and bounding box and time frame are `bbox` and
+`datetime`, respectively.
+
+The bounding box values take the sequence of: minimum longitude, minimum
+latitude, maximum longitude, and maximum latitude, and their coordinate
+reference system is WGS84.
+
+``` r
 stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
@@ -340,154 +472,334 @@ stac_source |>
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
+This does – again by default – return the first 10 items, but the number
+returned can be increased via the `limit` argument in `stac_search()`.
+
+### Search by a time frame
+
+When searching for a specific time frame, items that have a datetime
+property that *intersects* with the given time frame will be returned.
+It’s therefore best to search for a closed or open interval, rather than
+a specific date and time (which might be difficult to match exactly to
+an item’s time!). The date-time must be given in RFC 3339 format.
+
+To search for a closed interval, separate two date-times by a “/”,
+e.g. “2024-12-01T01:00:00Z/2024-12-01T05:00:00Z”:
+
 ``` r
-# In theory... we can use `items_matched()` to see how many match in a search:
-stac_source |>
+matching_timeframe_items <- stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
-    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
-  ) |>
-  get_request() |>
-  items_matched()
-```
-
-    NULL
-
-``` r
-# But: returns an integer value if the STAC web server does support this extension. Otherwise returns NULL.
-# Not supported here
-
-# Time range: datetime filter
-# From the docs:
-# a character with a date-time or an interval. Date and time strings needs to conform to RFC 3339. Intervals are expressed # by separating two date-time strings by '/' character. Open intervals are expressed by using '..' in place of date-time.
-#
-# Examples:
-# A date-time: "2018-02-12T23:20:50Z"
-# A closed interval: "2018-02-12T00:00:00Z/2018-03-18T12:31:12Z"
-# Open intervals: "2018-02-12T00:00:00Z/.." or "../2018-03-18T12:31:12Z"
-# Only features that have a datetime property that intersects the interval or date-time informed in datetime are selected.
-
-# 2024-01-01 to 2024-01-02
-stac_source |>
-  stac_search(
-    collection = "sentinel-2-l2a",
-    datetime = "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"
+    datetime = "2024-12-01T01:00:00Z/2024-12-01T05:00:00Z"
   ) |>
   get_request()
+
+matching_timeframe_items
 ```
 
     ###Items
-    - features (1 item(s)):
-      - S2A_MSIL2A_20240101T102431_N0510_R065_T32TNT_20240101T144052
+    - features (10 item(s)):
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T44HKD_20241201T065447
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T44HKC_20241201T065447
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T43HGU_20241201T065447
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T43HGT_20241201T065447
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T43HGS_20241201T065447
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T43HFU_20241201T065447
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T43HFT_20241201T065447
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T43HFS_20241201T065447
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T43HEV_20241201T065447
+      - S2A_MSIL2A_20241201T045911_N0511_R133_T43HEU_20241201T065447
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
+We can access the matching item’s `datetime` property to see that it
+falls within the specified interval:
+
 ``` r
-# Additional filters: instrument, platform
-# stac_search does not support all filters -> we can also use `ext_filter()`
+matching_timeframe_items |>
+  get_first_item_property("datetime")
+```
+
+    [1] "2024-12-01T04:59:11.024000Z"
+
+To search by an open interval, “..” is used to indicate the open end,
+e.g. “../2024-01-01T23:00:00Z” representing prior to that date-time, and
+“2024-01-01T23:00:00Z/..” representing after it:
+
+``` r
 stac_source |>
-  ext_filter(
-    collection == "sentinel-2-l2a" && `eo:cloud_cover` <= 10
+  stac_search(
+    collections = "sentinel-2-l2a",
+    datetime = "2025-01-01T23:00:00Z/.."
   ) |>
   get_request()
 ```
 
     ###Items
     - features (10 item(s)):
-      - S2A_MSIL2A_20250525T094051_N0511_R036_T32PQC_20250526T092812
-      - S2B_MSIL2A_20250524T115719_N0511_R123_T27PYT_20250524T151754
-      - S2B_MSIL2A_20250524T115719_N0511_R123_T27PYR_20250524T151754
-      - S2B_MSIL2A_20250524T115719_N0511_R123_T27PXT_20250524T151754
-      - S2B_MSIL2A_20250524T115719_N0511_R123_T27PXS_20250524T151754
-      - S2B_MSIL2A_20250524T115719_N0511_R123_T27PWT_20250524T151754
-      - S2B_MSIL2A_20250524T115719_N0511_R123_T27PWS_20250524T151754
-      - S2B_MSIL2A_20250524T115219_N0511_R123_T28SEB_20250524T152537
-      - S2B_MSIL2A_20250524T115219_N0511_R123_T28RES_20250524T152537
-      - S2B_MSIL2A_20250524T115219_N0511_R123_T28RER_20250524T152537
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VNE_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VND_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VNC_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VME_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VMD_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VMC_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLF_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLE_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLD_20250526T222916
+      - S2A_MSIL2A_20250526T191831_N0511_R056_T11VLC_20250526T222916
+    - assets: 
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+### Search by other item properties
+
+As shown above, there are a number of other properties attached to STAC
+items. We can also search using these properties. The `stac_search()`
+function is limited to properties like bounding box and time frame, so
+instead we use `ext_filter()`. This is a function that makes use of the
+Common Query Language (CQL2) filter extension, and allows us to do more
+complicated searching and querying using SQL-like language.
+
+To search for items whose platform is “sentinel-2b”, for example, we use
+`==` to indicate equality. It is also important to note that when using
+`ext_filter()`, we switch to using `post_request()` instead of
+`get_request()`.
+
+``` r
+sentinel_2b_platform_results <- stac_source |>
+  stac_search(collections = "sentinel-2-l2a") |>
+  ext_filter(platform == "sentinel-2b") |>
+  post_request()
+
+sentinel_2b_platform_results
+```
+
+    ###Items
+    - features (10 item(s)):
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18RVR_20250526T224207
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18RVQ_20250526T224207
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18RVP_20250526T224207
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18RVN_20250526T224207
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18RUS_20250526T224207
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18RTS_20250526T224207
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18QUK_20250526T224207
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18QUJ_20250526T224207
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18QTE_20250526T224719
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T17RQM_20250526T224207
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
 ``` r
-# This isn't working:
-x <- stac_source |>
-  ext_filter(
-    collection == "sentinel-2-l2a" && instruments == "msi"
-  ) |>
-  get_request()
+sentinel_2b_platform_results |>
+  get_first_item_property("platform")
+```
 
-# I wonder if it's some sort of case sensitivity etc?
-x
+    [1] "sentinel-2b"
+
+If the search value is contained in another variable, the value must be
+escaped in the search by using double curly braces:
+
+``` r
+search_platform <- "sentinel-2b"
+
+sentinel_2b_platform_results <- stac_source |>
+  stac_search(collections = "sentinel-2-l2a") |>
+  ext_filter(platform == {{ search_platform }}) |>
+  post_request()
+
+sentinel_2b_platform_results |>
+  get_first_item_property("platform")
+```
+
+    [1] "sentinel-2b"
+
+Note also that there is no `limit` argument in `ext_filter()`. To limit
+the number of items returned, the limit is supplied in `stac_search()`
+beforehand, since these search functions build upon one another:
+
+``` r
+stac_source |>
+  stac_search(collections = "sentinel-2-l2a", limit = 1) |>
+  ext_filter(platform == {{ search_platform }}) |>
+  post_request()
 ```
 
     ###Items
-    - features (0 item(s)):
+    - features (1 item(s)):
+      - S2B_MSIL2A_20250526T155529_N0511_R011_T18RVR_20250526T224207
     - assets: 
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+And to search for items with cloud cover of less than 40, we can use
+`<=`:
 
 ``` r
-# Combining filters
-# bbox and datetime
 stac_source |>
+  stac_search(collections = "sentinel-2-l2a") |>
+  ext_filter(`eo:cloud_cover` <= 40) |>
+  post_request() |>
+  get_first_item_property("eo:cloud_cover")
+```
+
+    [1] 36.09757
+
+To search for items whose instrument is “msi”, we can use the
+`a_contains()`. We need to use this instead of `==` because
+`instruments` can contain multiple values, and `a_contains()` searches
+for the value `"msi"` within the list of values that is `instruments`.
+
+``` r
+stac_source |>
+  stac_search(collections = "sentinel-2-l2a") |>
+  ext_filter(a_contains(instruments, "msi")) |>
+  post_request() |>
+  get_first_item_property("instruments")
+```
+
+    [1] "msi"
+
+Note that there is currently a bug with how the `rstac` package converts
+the API’s data to an R object. This bug makes it unclear that
+`instruments` is a list that needs to be searched within (instead of a
+single value). There is an issue to fix this bug in the `rstac` github
+repository.
+
+If you are having trouble filtering by properties that look like single
+values, it is a good idea to look for the JSON specification of the
+property in the [STAC Specification
+repository](github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json).
+For example, for the `instruments` property, we can look in the
+[intstrument.json](https://github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json)
+file and see that it is an *array* (what is called a list in R), while
+`platform` is just a string.
+
+``` json
+"properties": {
+    "platform": {
+      "title": "Platform",
+      "type": "string"
+    },
+    "instruments": {
+      "title": "Instruments",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+}
+```
+
+The [documentation for
+`ext_filter()`](https://brazil-data-cube.github.io/rstac/reference/ext_filter.html#details)
+contains information on how to construct many more filters than we’ve
+shown here.
+
+### Combine search criteria
+
+Finally, you can combine many filter criteria by supplying them
+together. We have already seen how to combine multiple criteria
+(collection ID and bounding box, for example) in `stac_search()`, by
+using the named arguments. We can also filter by bounding box and
+datetime in the same way. Meanwhile, multiple criteria in `ext_filter()`
+are separated by `&&`:
+
+``` r
+multiple_criteria_items <- stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
     bbox = c(-47.02148, -17.35063, -42.53906, -12.98314),
-    datetime = "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"
+    datetime = "../2025-01-01T23:00:00Z"
   ) |>
-  get_request()
+  ext_filter(
+    platform == "sentinel-2a" &&
+    `eo:cloud_cover` <= 40
+  ) |>
+  post_request()
+
+multiple_criteria_items |>
+  get_first_item_property("datetime")
 ```
 
-    ###Items
-    - features (0 item(s)):
-    - assets: 
-    - item's fields: 
+    [1] "2024-12-03T22:19:41.024000Z"
 
 ``` r
-# bbox and cloud coverage -> combining stac_search() and ext_filter()
-stac_source |>
-  stac_search(
-    collections = "sentinel-2-l2a",
-    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
-  ) |>
-  ext_filter(`eo:cloud_cover` <= 40) |>
-  get_request()
+multiple_criteria_items |>
+  get_first_item_property("platform")
 ```
 
-    ###Items
-    - features (3 item(s)):
-      - S2A_MSIL2A_20241203T221941_N0511_R029_T01LAF_20241204T000925
-      - S2A_MSIL2A_20241201T131241_N0511_R138_T23LQC_20241201T162047
-      - S2A_MSIL2A_20241201T131241_N0511_R138_T23KQB_20241201T162047
+    [1] "sentinel-2a"
+
+``` r
+multiple_criteria_items |>
+  get_first_item_property("eo:cloud_cover")
+```
+
+    [1] 23.39364
+
+# Browse assets
+
+Finally, assets fall under STAC items and direct users to the actual
+data itself. Each asset refers to data associated with the Item that can
+be downloaded or streamed.
+
+We will look at the assets for a specific item from the Sentinel-2
+Level-2A collection. Like collections, items can be filtered by their
+IDs. Their IDs are also available through the API:
+
+``` r
+sentinel_2_l2a_collection_items[["features"]][[1]]
+```
+
+    ###Item
+    - id: S2A_MSIL2A_20250526T191831_N0511_R056_T11VNE_20250526T222916
+    - collection: sentinel-2-l2a
+    - bbox: xmin: -117.00034, ymin: 57.64582, xmax: -115.71974, ymax: 58.05726
+    - datetime: 2025-05-26T19:18:31.024000Z
     - assets: 
-    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-``` r
-# Access a specific item(s) by ID
+Or through the STAC catalog of the EOPF Sentinel Zarr Samples Service,
+on the page for that item:
 
-# (ID is available from the browser, click "Source" and copy it)
-# https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a/items/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203?.language=en
+<figure>
+<img src="images/eopf-stac-access-items-id.png"
+alt="Finding the item ID in the STAC catalog" />
+<figcaption aria-hidden="true">Finding the item ID in the STAC
+catalog</figcaption>
+</figure>
+
+To select a single item, supply its ID in the `items()` function:
+
+``` r
 example_item <- stac_source |>
-  stac_search(
-    collections = "sentinel-2-l2a",
-    ids = "S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203"
-  ) |>
+  collections("sentinel-2-l2a") |>
+  items("S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203") |>
   get_request()
 
 example_item
 ```
 
-    ###Items
-    - features (1 item(s)):
-      - S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203
+    ###Item
+    - id: S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203
+    - collection: sentinel-2-l2a
+    - bbox: xmin: 25.04240, ymin: 17.98988, xmax: 25.20347, ymax: 18.11305
+    - datetime: 2025-05-17T08:55:41.024000Z
     - assets: 
-    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+There are a number of helpful functions for working with an item’s
+assets, such as `items_assets()` which lists them:
 
 ``` r
 # List the assets in an item
@@ -495,42 +807,44 @@ example_item |>
   items_assets()
 ```
 
-     [1] "AOT_10m"          "B01_20m"          "B02_10m"          "B03_10m"         
-     [5] "B04_10m"          "B05_20m"          "B06_20m"          "B07_20m"         
-     [9] "B08_10m"          "B09_60m"          "B11_20m"          "B12_20m"         
-    [13] "B8A_20m"          "product"          "product_metadata" "SCL_20m"         
-    [17] "SR_10m"           "SR_20m"           "SR_60m"           "TCI_10m"         
-    [21] "WVP_10m"         
+     [1] "SR_10m"           "SR_20m"           "SR_60m"           "AOT_10m"         
+     [5] "B01_20m"          "B02_10m"          "B03_10m"          "B04_10m"         
+     [9] "B05_20m"          "B06_20m"          "B07_20m"          "B08_10m"         
+    [13] "B09_60m"          "B11_20m"          "B12_20m"          "B8A_20m"         
+    [17] "SCL_20m"          "TCI_10m"          "WVP_10m"          "product"         
+    [21] "product_metadata"
+
+And `assets_select()` which allows us to select specific assets (in this
+case, the “Surface Reflectance - 10m” asset):
 
 ``` r
-# Select specific assets
-example_item |>
-  assets_select(asset_names = "AOT_10m")
+sr_10m <- example_item |>
+  assets_select(asset_names = "SR_10m")
+
+sr_10m
 ```
 
-    ###Items
-    - features (1 item(s)):
-      - S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203
-    - assets: AOT_10m
+    ###Item
+    - id: S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203
+    - collection: sentinel-2-l2a
+    - bbox: xmin: 25.04240, ymin: 17.98988, xmax: 25.20347, ymax: 18.11305
+    - datetime: 2025-05-17T08:55:41.024000Z
+    - assets: SR_10m
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-``` r
-# See its URL
-asset_url <- example_item |>
-  assets_select(asset_names = "AOT_10m") |>
-  assets_url()
-
-asset_url
-```
-
-    [1] "https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203.zarr/quality/atmosphere/r10m/aot"
+In particular, the “product” asset will be useful to working with EOPF
+Sample Service Zarr data, as this is the top-level Zarr hierarchy and
+will be used to actually access Zarr data. We can select this asset, and
+then use `assets_url()` to get its URL:
 
 ``` r
-# The "product" asset is what will be used in the Zarr tutorial
 example_item |>
   assets_select(asset_names = "product") |>
   assets_url()
 ```
 
     [1] "https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203.zarr"
+
+This leads into our next tutorial, where this asset and URL will be used
+to access and work with Zarr data.
