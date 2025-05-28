@@ -195,6 +195,8 @@ alt="Finding the collection ID in the STAC catalog" />
 catalog</figcaption>
 </figure>
 
+<br><br>
+
 The collection ID can be supplied directly in the `collections()`
 function. If we look at the query without getting the result, we can see
 that it has been formed using the `collection_id`, “sentinel-2-l2a”, as
@@ -776,6 +778,8 @@ alt="Finding the item ID in the STAC catalog" />
 <figcaption aria-hidden="true">Finding the item ID in the STAC
 catalog</figcaption>
 </figure>
+
+<br><br>
 
 To select a single item, supply its ID in the `items()` function:
 
