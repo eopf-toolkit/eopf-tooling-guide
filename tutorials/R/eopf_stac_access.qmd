@@ -75,7 +75,7 @@ stac_collections[["collections"]] |>
   head(n = 3)
 ```
 
-The Sentinel-2 Level-2A can be accessed by getting the first entry in `stac_collections()[["collections"]]`
+The Sentinel-2 Level-2A collection can be accessed by getting the first entry in `stac_collections()[["collections"]]`
 
 ```{r collections-single-index}
 stac_collections[["collections"]][[1]]
@@ -109,7 +109,7 @@ Within collections, there are _items_. Items are the building blocks for STAC. A
 
 An important thing to note with `rstac` is that you cannot continue to build queries on top of ones that have already had their results returned (via `get_request()`). It may make sense for a typical workflow in R to "get" the collection, then to try to get the items from it, but this will produce an error:
 
-```{r item-error}
+```{r item-error, eval = FALSE}
 #| error: true
 sentinel_2_l2a_collection <- stac_source |>
   collections(collection_id = "sentinel-2-l2a") |>
@@ -169,7 +169,7 @@ TODO: link to this table (or include it here as well?) https://github.com/eopf-t
 
 For example, the EOPF instrument mode:
 
-```{r item-properties}
+```{r item-properties-example}
 sentinel_2_l2a_first_item[["properties"]][["eopf:instrument_mode"]]
 ```
 
@@ -281,8 +281,6 @@ stac_source %>%
   get_request()
 ```
 
-# TODO ------
-
 To search for items whose instrument contains "msi", we can use the `%like%` operator:
 
 ```{r}
@@ -293,10 +291,11 @@ stac_source %>%
   get_first_item_property("instruments")
 ```
 
-# TODO ------
+TODO: contains instead of like?
+
+TODO: Note, it is not clear here that we are doing this because "instruments" is actually an array, not a string. I need to open an issue with Rarr around the auto unboxing behaviour, because it is not clear *why* using `==` does not work. Or, I need to figure out how to link the appropriate documentation to look up what "type" a property is.
 
 And to search for items with cloud cover of less than 40, we can use `<=`"
-
 
 ```{r search-items-extfilter-cloudcover}
 stac_source %>%
@@ -335,106 +334,54 @@ multiple_criteria_items %>%
   get_first_item_property("eo:cloud_cover")
 ```
 
----
+# Assets
 
-# WIP after this
+Finally, assets fall under STAC items and direct users to the actual data itself. Each asset refers to data associated with the Item that can be downloaded or streamed.
 
-```{r eval = FALSE}
-# Additional filters: instrument, platform
-# stac_search does not support all filters -> we can also use `ext_filter()`
-stac_source |>
-  ext_filter(
-    collection == "sentinel-2-l2a" && `eo:cloud_cover` <= 10
-  ) |>
-  get_request()
+We will look at the assets for a specific item from the Sentinel-2 Level-2A collection. Like collections, items can be filtered by their IDs. Their IDs are also available through the API:
 
-# This isn't working:
-x <- stac_source |>
-  ext_filter(
-    collection == "sentinel-2-l2a" && instruments == "msi"
-  ) |>
-  get_request()
-
-# I wonder if it's some sort of case sensitivity etc?
-x
-
-# Combining filters
-# bbox and datetime
-stac_source |>
-  stac_search(
-    collections = "sentinel-2-l2a",
-    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314),
-    datetime = "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"
-  ) |>
-  get_request()
-
-# bbox and cloud coverage -> combining stac_search() and ext_filter()
-stac_source |>
-  stac_search(
-    collections = "sentinel-2-l2a",
-    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
-  ) |>
-  ext_filter(`eo:cloud_cover` <= 40) |>
-  get_request()
+```{r show-item-id}
+sentinel_2_l2a_collection_items[["features"]][[1]]
 ```
 
-### Combining search criteria
+Or through the STAC catalog of the EOPF Sentinel Zarr Samples Service, on the page for that item:
 
-```{r}
-# Access a specific item(s) by ID
+![Finding the item ID in the STAC catalog](images/eopf-stac-access-items-id.png)
 
-# (ID is available from the browser, click "Source" and copy it)
-# https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a/items/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203?.language=en
+To select a single item, use `items()`:
+
+```{r select-item}
 example_item <- stac_source |>
-  stac_search(
-    collections = "sentinel-2-l2a",
-    ids = "S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203"
-  ) |>
+  collections("sentinel-2-l2a") %>%
+  items("S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203") %>%
   get_request()
 
 example_item
 ```
 
-# Assets
+There are a number of helpful functions for working with an item's assets, such as `items_assets()` which lists them:
 
-```{r}
+```{r list-assets}
 # List the assets in an item
 example_item |>
   items_assets()
 ```
 
-```{r}
-# Select specific assets
-example_item |>
-  assets_select(asset_names = "AOT_10m")
+And `assets_select()` which allows us to select specific assets (in this case, the "Surface Reflectance - 10m" asset):
+
+```{r select-assets}
+sr_10m <- example_item |>
+  assets_select(asset_names = "SR_10m")
+
+sr_10m
 ```
 
-```{r}
-# See its URL
-asset_url <- example_item |>
-  assets_select(asset_names = "AOT_10m") |>
-  assets_url()
+In particular, the "product" asset will be useful to working with EOPF Sample Service Zarr data, as this is the top-level Zarr hierarchy and will be used to actually access Zarr data. We can select this asset, and then use `assets_url()` to get its URL:
 
-asset_url
-```
-
-```{r}
-# The "product" asset is what will be used in the Zarr tutorial
+```{r asset-select-product}
 example_item |>
   assets_select(asset_names = "product") |>
   assets_url()
 ```
 
-
-```{r}
-# In theory... we can use `items_matched()` to see how many match in a search:
-stac_source |>
-  stac_search(
-    collections = "sentinel-2-l2a",
-    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
-  ) |>
-  get_request() |>
-  items_matched()
-# But: returns an integer value if the STAC web server does support this extension. Otherwise returns NULL.
-# Not supported here
-```
+This leads into our next tutorial (TODO: link), where this asset and URL will be used to access and work with Zarr data. 
