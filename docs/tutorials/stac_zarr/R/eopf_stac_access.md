@@ -41,7 +41,7 @@ for a self-contained coding environment.
 
 ## Dependencies
 
-The `rstatc` package is required to follow this tutorial. You can
+The `rstac` package is required to follow this tutorial. You can
 install it directly from CRAN:
 
 ``` r

@@ -31,7 +31,7 @@ An R environment is required to follow this tutorial, with R version >= 4.1.0. W
 
 ## Dependencies
 
-The `rstatc` package is required to follow this tutorial. You can install it directly from CRAN:
+The `rstac` package is required to follow this tutorial. You can install it directly from CRAN:
 
 ```{r install}
 #| eval: false
