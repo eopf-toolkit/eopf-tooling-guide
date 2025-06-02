@@ -10,13 +10,6 @@
 [EOPF Service](#eopf-service)<br/>
 [EOPF and STAC Extensions](#eopf-and-stac-extensions)<br/>
 [Zarr](#zarr)<br/>
-[Working Environment](#working-environment)<br/>
-[Exploring Zarr](#exploring-zarr)<br/>
-[Analyzing Zarr](#analyzing-zarr)<br/>
-[Pitfalls and Performance Considerations](#pitfalls-and-performance-considerations)<br/>
-[Further Reading](#further-reading)<br/>
-[Feedback](#feedback)<br/>
-
 
 ## Context and Motivation
 
@@ -88,6 +81,6 @@ Adding specific metadata to STAC through the use of extensions enhances it by al
 
 ## Zarr
 
-Zarr is an open-source specification for storing chunked, compressed N-dimensional arrays in a simple key-value layout, so the data can live just as happily on an object store such as Amazon S3 as on a local file system. Because each chunk is an independent object, clients can read or write only the pieces they need, enabling true parallel I/O, lazy loading and efficient cloud-native workflows.
+Zarr is an open-source specification for storing chunked, compressed N-dimensional arrays in a simple key-value layout, so the data can live just as happily on an object store such as Cloud based storage or on a local file system. Because each chunk is an independent object, clients can read or write only the pieces they need, enabling true parallel I/O, lazy loading and efficient cloud-native workflows.
 
 EOPF has adopted Zarr as its canonical storage format for re-engineered Sentinel 1, 2, and 3 products. Within the EOPF Zarr Service every original SAFE package is converted into a browsable Zarr hierarchy, hosted on an cloud storage backend.
