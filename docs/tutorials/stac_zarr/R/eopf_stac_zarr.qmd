@@ -1,0 +1,226 @@
+---
+title: "Access and Analyze EOPF STAC Zarr Data with R"
+format: md
+execute:
+  cache: true
+---
+
+# Table of Contents
+
+- [Introduction](#introduction)
+- [Prerequisites](#prerequisites)
+  - [Dependencies](#dependencies)
+
+# Introduction
+
+This tutorial will explore how to access and analyze Zarr data from the [EOPF Sample Service STAC catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using R.
+
+# Prerequisites
+
+An R environment is required to follow this tutorial, with R version >= 4.1.0. We recommend using either [RStudio](https://posit.co/download/rstudio-desktop/) or [Positron](https://posit.co/products/ide/positron/) (or a cloud computing environment) and making use of [RStudio projects](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects) for a self-contained coding environment.
+
+## Dependencies
+
+TODO -> is purrr needed?
+
+We will use the `rstac` package (for accessing the STAC catalog) and the `purrr` package (for data manipulation) in this tutorial. You can install them directly from CRAN:
+
+```{r install-rstac}
+#| eval: false
+install.packages("rstac")
+install.packages("purrr")
+```
+
+We will also use the `Rarr` package. It must be installed from Bioconductor, so first install the `BiocManager` package:
+
+```{r install-BiocManager}
+#| eval: false
+install.packages("BiocManager")
+```
+
+Then, use this package to install `Rarr`:
+
+```{r install-rarr}
+#| eval: false
+BiocManager::install("Rarr")
+```
+
+Finally, load the packages into your environment:
+
+```{r load, message=FALSE}
+#| cache: false
+library(rstac)
+library(purrr)
+library(Rarr)
+```
+
+## Fixes to the `Rarr` package
+
+We will use functions from the `Rarr` package to read and analyze Zarr data. Unfortunately, there is currently a bug in this package, causing it to parse the EOPF Sample Service data URLs incorrectly -- there is a [pull request](https://github.com/grimbough/Rarr/pull/21) open to fix this. In the meantime, we will write our own version of this URL parsing function and use it instead of the one in `Rarr`.
+
+```{r overwrite-url-parsing}
+#| cache: false
+.url_parse_other <- function(url) {
+  parsed_url <- httr::parse_url(url)
+  bucket <- gsub(
+    x = parsed_url$path, pattern = "^/?([[a-z0-9\\:\\.-]*)/.*",
+    replacement = "\\1", ignore.case = TRUE
+  )
+  object <- gsub(
+    x = parsed_url$path, pattern = "^/?([a-z0-9\\:\\.-]*)/(.*)",
+    replacement = "\\2", ignore.case = TRUE
+  )
+  hostname <- paste0(parsed_url$scheme, "://", parsed_url$hostname)
+
+  if (!is.null(parsed_url$port)) {
+    hostname <- paste0(hostname, ":", parsed_url$port)
+  }
+
+  res <- list(
+    bucket = bucket,
+    object = object,
+    region = "auto",
+    hostname = hostname
+  )
+  return(res)
+}
+
+assignInNamespace(".url_parse_other", .url_parse_other, ns = "Rarr")
+```
+
+This function overwrites the existing one in `Rarr`, and allows us to continue with the analysis.
+
+If you try to run some of the examples below and receive a timeout error, please ensure that you have run the above code block.
+
+# Accessing Zarr data from the STAC Catalog
+
+The first step of accessing Zarr data is to find the correct asset within the EOPF Sample Service STAC catalog. The [first tutorial](TODO) goes into detail on this, so we recommend reviewing it if you have not already.
+
+For the first part of this tutorial, we will be using data from the [Sentinel-2 Level-2A Collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a). We fetch the "product" asset under a given item, and can look at its URL:
+
+```{r access-stac-product}
+product <- stac("https://stac.core.eopf.eodc.eu/") %>%
+  collections(collection_id = "sentinel-2-l2a") %>%
+  items(feature_id = "S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252") %>%
+  get_request() %>%
+  assets_select(asset_names = "product")
+
+product_url <- product %>%
+  assets_url()
+
+product_url
+```
+
+This URL is what we use to begin loading and analyzing the data.
+
+# Exploring Zarr data
+
+Zarr is a format that allows the storage of large, multidimensional array data. The data is divided into subsets known as **chunks**, and the Zarr format allows for efficient access to those chunks. 
+
+We cannot read all of the data in at once, nor is it typically desirable. As we see on the [Sentinel-2 Level-2A Collection page](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a), the data is split up into multiple **resolutions** as well as multiple **bands**, which contain the actual variable measurements, as well as quality assurance bands, which help to identify and improve the accuracy of the measurements.
+
+The `zarr_overview()` function gives us an quick overview of the data:
+
+```{r overview}
+#| eval: false
+zarr_overview(product_url)
+
+#> Type: Group of Arrays
+#> Path: https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr/
+#> Arrays:
+#> ---
+#>   Path: conditions/geometry/angle
+#>   Shape: 2
+#>   Chunk Shape: 2
+#>   No. of Chunks: 1 (1)
+#>   Data Type: unicode224
+#>   Endianness: little
+#>   Compressor: blosc
+#> ---
+#>   Path: conditions/geometry/band
+#>   Shape: 13
+#>   Chunk Shape: 13
+#>   No. of Chunks: 1 (1)
+#>   Data Type: unicode96
+#>   Endianness: little
+#>   Compressor: blosc
+#> ---
+#>   Path: conditions/geometry/detector
+#>   Shape: 5
+#>   Chunk Shape: 5
+#>   No. of Chunks: 1 (1)
+#>   Data Type: int64
+#>   Endianness: little
+#>   Compressor: blosc
+```
+
+^^ just a small amount of this, because it's huge!
+
+Some notes (for myself):
+
+- These are actually _groups_ of arrays, not individual arrays
+- I think there is one array per band/resolution
+- Is this the "hierarchical" groups that Rarr says it cannot handle?
+
+```{r zarr-overview, message=FALSE}
+product_overview <- zarr_overview(product_url, as_data_frame = TRUE)
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+product_overview <- product_overview %>% as_tibble()
+
+# Remove main URL from path, split by / into hierarchies
+
+zarr_hierarchies <- product_overview %>%
+  mutate(
+    path = str_remove(path, product_url),
+    path = str_remove(path, "/")
+  ) %>%
+  separate(path, into = c("one", "two", "three", "four", "five"), sep = "/", fill = "right")
+
+zarr_hierarchies %>%
+  count(one)
+
+zarr_hierarchies %>%
+  count(one, two)
+```
+
+According to https://highway.esa.int/support/data-services/eopf-format, an EOProduct consists of:
+
+- measurements
+- quality
+- conditions
+
+so we see that is the case here
+
+```{r}
+zarr_hierarchies %>%
+  filter(one == "measurements", two == "reflectance") %>%
+  count(three)
+```
+
+This then contains the resolutions
+
+```{r}
+zarr_hierarchies %>%
+  filter(one == "measurements", two == "reflectance") %>%
+  count(four)
+```
+
+which then have the bands and x/y within.
+
+But these things need to go together, e.g. to have the x and y for b01 measurements, and to also have the masks to e.g. remove cloudy pixels
+
+```{r}
+zarr_hierarchies %>%
+  filter(one == "quality", two == "mask") %>%
+  distinct(three, four)
+```
+
+So how do we read in the actual Zarr data? The [docs](https://bioconductor.org/packages/release/bioc/vignettes/Rarr/inst/doc/Rarr.html#limitations-with-rarr) say:
+
+> If you know about Zarr arrays already, you’ll probably be aware they can be stored in hierarchical groups, where additional meta data can explain the relationship between the arrays. Currently, Rarr is not designed to be aware of these hierarchical Zarr array collections. However, the component arrays can be read individually by providing the path to them directly.
+
+So will work on providing the direct paths instead.
