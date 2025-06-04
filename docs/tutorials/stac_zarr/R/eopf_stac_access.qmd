@@ -117,7 +117,7 @@ Within collections, there are _items_. Items are the building blocks for STAC. A
 An important thing to note with `rstac` is that you cannot continue to build queries on top of ones that have already had their results returned (via `get_request()`). It may make sense for a typical workflow in R to "get" the collection, then to try to get the items from it, but this will produce an error:
 
 ```{r item-error}
-#| error: true
+#| eval: false
 sentinel_2_l2a_collection <- stac_source |>
   collections(collection_id = "sentinel-2-l2a") |>
   get_request()
@@ -125,6 +125,8 @@ sentinel_2_l2a_collection <- stac_source |>
 sentinel_2_l2a_collection |>
   items()
 ```
+
+    Error: Invalid rstac_query value.
 
 If you see this error --- `"Invalid rstac_query value"` --- ensure that you are running `get_request()` at the very end of your query building functions. Using `items()` this way, we can see that it returns a summary of the collection's items:
 
