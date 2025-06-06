@@ -253,7 +253,40 @@ stac_source |>
 
 As shown above, there are a number of other properties attached to STAC items. We can also search using these properties. The `stac_search()` function is limited to properties like bounding box and time frame, so instead we use `ext_filter()`. This is a function that makes use of the Common Query Language (CQL2) filter extension, and allows us to do more complicated searching and querying using SQL-like language. It is also important to note that when using `ext_filter()`, we switch to using `post_request()` instead of `get_request()`.
 
-To search for items whose platform is "sentinel-2b", for example, we use `==` to indicate equality:
+For this searching, it is helpful to know the _data type_ for an item property in advance, as this will impact what operation to use within `ext_filter()`. We create an additional helper function for this:
+
+```{r get-item-property-type}
+get_item_property_type <- function(property = NULL) {
+  api_res <- rstac:::make_get_request("https://stac.core.eopf.eodc.eu/api") |>
+    rstac:::content_response_json()
+  item_properties_schema <- api_res[["components"]][["schemas"]][["ItemProperties"]][["properties"]]
+
+  property_types <- lapply(item_properties_schema, function(x) {
+    x[["anyOf"]][[1]][["type"]]
+  })
+
+  if (is.null(property)) {
+    property_types
+  } else {
+    property_types[[property]]
+  }
+}
+```
+
+When no argument is passed to this function, it will return all of the properties and their types:
+
+```{r get-item-property-type-all}
+get_item_property_type()
+```
+
+When the name of a property is passed, it will return the type of that property. We can see, for example, that `platform` is a string, while `instruments` is an array.
+
+```{r get-item-property-type-single}
+get_item_property_type("platform")
+get_item_property_type("instruments")
+```
+
+Since `platform` is a string, we use `==` to indicate equality. For example, to search for items whose platform is "sentinel-2b":
 
 ```{r search-items-extfilter}
 sentinel_2b_platform_results <- stac_source |>
@@ -290,7 +323,7 @@ stac_source |>
   post_request()
 ```
 
-And to search for items with cloud cover of less than 40, we use `<=`:
+To search for items with cloud cover of less than 40, we use `<=`:
 
 ```{r search-items-extfilter-cloudcover}
 stac_source |>
@@ -300,7 +333,7 @@ stac_source |>
   get_first_item_property("eo:cloud_cover")
 ```
 
-To search for items whose instrument is "msi", we use the `a_contains()` function. We need to use this instead of `==` because `instruments` can contain multiple values, and `a_contains()` searches for the value `"msi"` within the list of values that is `instruments`.
+If we want to search for items where `instruments` is "msi", we use the `a_contains()` function. We need to use this instead of `==` because `instruments` is an `array`, as seen above. This means it operates like a list within R, and can contain multiple values -- `a_contains()` searches for the value `"msi"` within the list of values that is `instruments`.
 
 ```{r search-items-extfilter-instruments}
 stac_source |>
@@ -310,25 +343,7 @@ stac_source |>
   get_first_item_property("instruments")
 ```
 
-Note that there is currently a bug with how the `rstac` package converts the API's data to an R object. This bug makes it unclear that `instruments` is a _list_ that needs to be searched within (instead of a single value). There is an [issue to fix this bug in the `rstac` github repository](https://github.com/brazil-data-cube/rstac/issues/175).
-
-If you are having trouble searching within properties that look like single values, it is a good idea to look for the JSON specification of the property in the [STAC Specification repository](github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json). For example, for the `instruments` property, we can look in the [intstrument.json](https://github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json) file and see that it is an _array_ (what is called a list in R), while `platform` is just a string.
-
-```json
-"properties": {
-    "platform": {
-      "title": "Platform",
-      "type": "string"
-    },
-    "instruments": {
-      "title": "Instruments",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    }
-}
-```
+Note that there is currently a bug with how the `rstac` package converts the API's data to an R object. This bug makes it unclear that `instruments` is a _list_ that needs to be searched within (instead of a single value). There is an [issue to fix this bug in the `rstac` github repository](https://github.com/brazil-data-cube/rstac/issues/175). We hope that the helper function `get_item_property_type()` will be helpful in the meantime to determine which filtering operation to use.
 
 The [documentation for `ext_filter()`](https://brazil-data-cube.github.io/rstac/reference/ext_filter.html#details) contains information on how to construct many more searches than we've shown here.
 

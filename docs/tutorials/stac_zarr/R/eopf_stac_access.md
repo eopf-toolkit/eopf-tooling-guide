@@ -265,16 +265,16 @@ sentinel_2_l2a_collection_items
 
     ###Items
     - features (10 item(s)):
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33QTV_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33QTU_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33QTA_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33PTT_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QRF_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QRE_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QRD_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QQF_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QQE_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QQD_20250604T114411
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T36WVC_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T35WPS_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T34WFS_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T34VCK_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UVU_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UVT_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UVS_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UUU_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UUT_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UUS_20250606T120412
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
@@ -292,16 +292,16 @@ stac_source |>
 
     ###Items
     - features (20 item(s)):
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33QTV_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33QTU_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33QTA_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33PTT_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QRF_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QRE_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QRD_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QQF_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QQE_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QQD_20250604T114411
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T36WVC_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T35WPS_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T34WFS_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T34VCK_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UVU_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UVT_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UVS_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UUU_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UUT_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UUS_20250606T120412
       - ... with 10 more feature(s).
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
@@ -320,10 +320,10 @@ sentinel_2_l2a_collection_items[["features"]] |>
 
     [[1]]
     ###Item
-    - id: S2A_MSIL2A_20250604T095551_N0511_R036_T33QTV_20250604T114411
+    - id: S2A_MSIL2A_20250606T101701_N0511_R065_T36WVC_20250606T121844
     - collection: sentinel-2-l2a
-    - bbox: xmin: 12.16580, ymin: 17.07699, xmax: 12.79557, ymax: 18.07581
-    - datetime: 2025-06-04T09:55:51.024000Z
+    - bbox: xmin: 30.34194, ymin: 69.66675, xmax: 31.51796, ymax: 70.29425
+    - datetime: 2025-06-06T10:17:01.024000Z
     - assets: 
     SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
     - item's fields: 
@@ -331,10 +331,10 @@ sentinel_2_l2a_collection_items[["features"]] |>
 
     [[2]]
     ###Item
-    - id: S2A_MSIL2A_20250604T095551_N0511_R036_T33QTU_20250604T114411
+    - id: S2A_MSIL2A_20250606T101701_N0511_R065_T35WPS_20250606T121844
     - collection: sentinel-2-l2a
-    - bbox: xmin: 12.17987, ymin: 16.17391, xmax: 12.57506, ymax: 17.16980
-    - datetime: 2025-06-04T09:55:51.024000Z
+    - bbox: xmin: 29.51559, ymin: 69.11868, xmax: 29.94407, ymax: 69.39099
+    - datetime: 2025-06-06T10:17:01.024000Z
     - assets: 
     SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
     - item's fields: 
@@ -349,7 +349,7 @@ sentinel_2_l2a_first_item <- sentinel_2_l2a_collection_items[["features"]][[1]]
 sentinel_2_l2a_first_item[["bbox"]]
 ```
 
-    [1] 12.16580 17.07699 12.79557 18.07581
+    [1] 30.34194 69.66675 31.51796 70.29425
 
 And many more additional properties, with their properties under
 `"properties"` in an individual item.
@@ -536,16 +536,16 @@ stac_source |>
 
     ###Items
     - features (10 item(s)):
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33QTV_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33QTU_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33QTA_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T33PTT_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QRF_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QRE_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QRD_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QQF_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QQE_20250604T114411
-      - S2A_MSIL2A_20250604T095551_N0511_R036_T32QQD_20250604T114411
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T36WVC_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T35WPS_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T34WFS_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T34VCK_20250606T121844
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UVU_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UVT_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UVS_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UUU_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UUT_20250606T120412
+      - S2A_MSIL2A_20250606T101701_N0511_R065_T33UUS_20250606T120412
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
@@ -562,8 +562,95 @@ complicated searching and querying using SQL-like language. It is also
 important to note that when using `ext_filter()`, we switch to using
 `post_request()` instead of `get_request()`.
 
-To search for items whose platform is “sentinel-2b”, for example, we use
-`==` to indicate equality:
+For this searching, it is helpful to know the *data type* for an item
+property in advance, as this will impact what operation to use within
+`ext_filter()`. We create an additional helper function for this:
+
+``` r
+get_item_property_type <- function(property = NULL) {
+  api_res <- rstac:::make_get_request("https://stac.core.eopf.eodc.eu/api") |>
+    rstac:::content_response_json()
+  item_properties_schema <- api_res[["components"]][["schemas"]][["ItemProperties"]][["properties"]]
+
+  property_types <- lapply(item_properties_schema, function(x) {
+    x[["anyOf"]][[1]][["type"]]
+  })
+
+  if (is.null(property)) {
+    property_types
+  } else {
+    property_types[[property]]
+  }
+}
+```
+
+When no argument is passed to this function, it will return all of the
+properties and their types:
+
+``` r
+get_item_property_type()
+```
+
+    $title
+    [1] "string"
+
+    $description
+    [1] "string"
+
+    $datetime
+    [1] "string"
+
+    $created
+    [1] "string"
+
+    $updated
+    [1] "string"
+
+    $start_datetime
+    [1] "string"
+
+    $end_datetime
+    [1] "string"
+
+    $license
+    [1] "string"
+
+    $providers
+    [1] "array"
+
+    $platform
+    [1] "string"
+
+    $instruments
+    [1] "array"
+
+    $constellation
+    [1] "string"
+
+    $mission
+    [1] "string"
+
+    $gsd
+    [1] "number"
+
+When the name of a property is passed, it will return the type of that
+property. We can see, for example, that `platform` is a string, while
+`instruments` is an array.
+
+``` r
+get_item_property_type("platform")
+```
+
+    [1] "string"
+
+``` r
+get_item_property_type("instruments")
+```
+
+    [1] "array"
+
+Since `platform` is a string, we use `==` to indicate equality. For
+example, to search for items whose platform is “sentinel-2b”:
 
 ``` r
 sentinel_2b_platform_results <- stac_source |>
@@ -576,16 +663,16 @@ sentinel_2b_platform_results
 
     ###Items
     - features (10 item(s)):
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WEU_20250604T112816
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WET_20250604T112816
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WES_20250604T112816
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WER_20250604T112816
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WEQ_20250604T112816
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WDU_20250604T112816
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WDT_20250604T112816
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WDS_20250604T112816
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WDR_20250604T112816
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WDQ_20250604T112816
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37VED_20250606T112504
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37VED_20250606T104103
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37VEC_20250606T112504
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37UEV_20250606T112504
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37UEU_20250606T112504
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37UET_20250606T112504
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37UES_20250606T112504
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37UER_20250606T112504
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37UEQ_20250606T112504
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37UEP_20250606T112504
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
@@ -628,13 +715,13 @@ stac_source |>
 
     ###Items
     - features (1 item(s)):
-      - S2B_MSIL2A_20250604T093029_N0511_R136_T37WEU_20250604T112816
+      - S2B_MSIL2A_20250606T082559_N0511_R021_T37VED_20250606T112504
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-And to search for items with cloud cover of less than 40, we use `<=`:
+To search for items with cloud cover of less than 40, we use `<=`:
 
 ``` r
 stac_source |>
@@ -644,12 +731,14 @@ stac_source |>
   get_first_item_property("eo:cloud_cover")
 ```
 
-    [1] 3.946787
+    [1] 33.66609
 
-To search for items whose instrument is “msi”, we use the `a_contains()`
-function. We need to use this instead of `==` because `instruments` can
-contain multiple values, and `a_contains()` searches for the value
-`"msi"` within the list of values that is `instruments`.
+If we want to search for items where `instruments` is “msi”, we use the
+`a_contains()` function. We need to use this instead of `==` because
+`instruments` is an `array`, as seen above. This means it operates like
+a list within R, and can contain multiple values – `a_contains()`
+searches for the value `"msi"` within the list of values that is
+`instruments`.
 
 ``` r
 stac_source |>
@@ -665,32 +754,9 @@ Note that there is currently a bug with how the `rstac` package converts
 the API’s data to an R object. This bug makes it unclear that
 `instruments` is a *list* that needs to be searched within (instead of a
 single value). There is an [issue to fix this bug in the `rstac` github
-repository](https://github.com/brazil-data-cube/rstac/issues/175).
-
-If you are having trouble searching within properties that look like
-single values, it is a good idea to look for the JSON specification of
-the property in the [STAC Specification
-repository](github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json).
-For example, for the `instruments` property, we can look in the
-[intstrument.json](https://github.com/radiantearth/stac-spec/blob/master/item-spec/json-schema/instrument.json)
-file and see that it is an *array* (what is called a list in R), while
-`platform` is just a string.
-
-``` json
-"properties": {
-    "platform": {
-      "title": "Platform",
-      "type": "string"
-    },
-    "instruments": {
-      "title": "Instruments",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    }
-}
-```
+repository](https://github.com/brazil-data-cube/rstac/issues/175). We
+hope that the helper function `get_item_property_type()` will be helpful
+in the meantime to determine which filtering operation to use.
 
 The [documentation for
 `ext_filter()`](https://brazil-data-cube.github.io/rstac/reference/ext_filter.html#details)
@@ -753,10 +819,10 @@ sentinel_2_l2a_collection_items[["features"]][[1]]
 ```
 
     ###Item
-    - id: S2A_MSIL2A_20250604T095551_N0511_R036_T33QTV_20250604T114411
+    - id: S2A_MSIL2A_20250606T101701_N0511_R065_T36WVC_20250606T121844
     - collection: sentinel-2-l2a
-    - bbox: xmin: 12.16580, ymin: 17.07699, xmax: 12.79557, ymax: 18.07581
-    - datetime: 2025-06-04T09:55:51.024000Z
+    - bbox: xmin: 30.34194, ymin: 69.66675, xmax: 31.51796, ymax: 70.29425
+    - datetime: 2025-06-06T10:17:01.024000Z
     - assets: 
     SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
     - item's fields: 
