@@ -26,15 +26,13 @@ for a self-contained coding environment.
 
 ## Dependencies
 
-TODO -\> is purrr needed?
-
 We will use the `rstac` package (for accessing the STAC catalog) and the
-`purrr` package (for data manipulation) in this tutorial. You can
+`tidyverse` package (for data manipulation) in this tutorial. You can
 install them directly from CRAN:
 
 ``` r
 install.packages("rstac")
-install.packages("purrr")
+install.packages("tidyverse")
 ```
 
 We will also use the `Rarr` package. It must be installed from
@@ -54,7 +52,7 @@ Finally, load the packages into your environment:
 
 ``` r
 library(rstac)
-library(purrr)
+library(tidyverse)
 library(Rarr)
 ```
 
@@ -104,9 +102,9 @@ error, please ensure that you have run the above code block.
 
 # Accessing Zarr data from the STAC Catalog
 
-The first step of accessing Zarr data is to find the correct asset
-within the EOPF Sample Service STAC catalog. The [first tutorial](TODO)
-goes into detail on this, so we recommend reviewing it if you have not
+The first step of accessing Zarr data is to understand the assets within
+the EOPF Sample Service STAC catalog. The [first tutorial](TODO) goes
+into detail on this, so we recommend reviewing it if you have not
 already.
 
 For the first part of this tutorial, we will be using data from the
@@ -116,10 +114,12 @@ We fetch the “product” asset under a given item, and can look at its
 URL:
 
 ``` r
-product <- stac("https://stac.core.eopf.eodc.eu/") %>%
+item <- stac("https://stac.core.eopf.eodc.eu/") %>%
   collections(collection_id = "sentinel-2-l2a") %>%
   items(feature_id = "S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252") %>%
-  get_request() %>%
+  get_request()
+
+product <- item %>%
   assets_select(asset_names = "product")
 
 product_url <- product %>%
@@ -130,23 +130,9 @@ product_url
 
     [1] "https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr"
 
-This URL is what we use to begin loading and analyzing the data.
+# WIP —-
 
-# Exploring Zarr data
-
-Zarr is a format that allows the storage of large, multidimensional
-array data. The data is divided into subsets known as **chunks**, and
-the Zarr format allows for efficient access to those chunks.
-
-We cannot read all of the data in at once, nor is it typically
-desirable. As we see on the [Sentinel-2 Level-2A Collection
-page](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a),
-the data is split up into multiple **resolutions** as well as multiple
-**bands**, which contain the actual variable measurements, as well as
-quality assurance bands, which help to identify and improve the accuracy
-of the measurements.
-
-The `zarr_overview()` function gives us an quick overview of the data:
+The product is the “top level” Zarr asset:
 
 ``` r
 zarr_overview(product_url)
@@ -179,6 +165,77 @@ zarr_overview(product_url)
 #>   Endianness: little
 #>   Compressor: blosc
 ```
+
+But within it, there are other groups of Zarr assets, which are aligned
+and contain the same dimensions and coordinates, and contain Zarr arrays
+within them. Use the “dataset” role to access these:
+
+``` r
+assets <- item[["assets"]]
+
+asset_metadata <- assets |>
+  map(\(asset) {
+    asset[c("title", "roles", "href")]
+  })
+
+datasets_assets <- asset_metadata %>%
+  keep(\(asset) "dataset" %in% asset[["roles"]]) %>%
+  names()
+
+example_asset <- datasets_assets[1]
+
+example_asset_url <- item %>%
+  assets_select(asset_names = example_asset) %>%
+  assets_url()
+
+# zarr_overview(example_asset_url)
+# Error in stop(error) : bad error message
+```
+
+Ok that’s not ideal… what about a “data”?
+
+``` r
+data_assets <- asset_metadata %>%
+  keep(\(asset) "data" %in% asset[["roles"]] & !(any(c("dataset", "metadata") %in% asset[["roles"]]))) %>%
+  names()
+
+example_asset <- data_assets[1]
+
+example_asset_url <- item %>%
+  assets_select(asset_names = example_asset) %>%
+  assets_url()
+
+zarr_overview(example_asset_url)
+```
+
+    Type: Array
+    Path: https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr/quality/atmosphere/r10m/aot/
+    Shape: 10980 x 10980
+    Chunk Shape: 1830 x 1830
+    No. of Chunks: 36 (6 x 6)
+    Data Type: uint16
+    Endianness: little
+    Compressor: blosc
+
+Ok yes, these work
+
+# Scratch —-
+
+# Exploring Zarr data
+
+Zarr is a format that allows the storage of large, multidimensional
+array data. The data is divided into subsets known as **chunks**, and
+the Zarr format allows for efficient access to those chunks.
+
+We cannot read all of the data in at once, nor is it typically
+desirable. As we see on the [Sentinel-2 Level-2A Collection
+page](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a),
+the data is split up into multiple **resolutions** as well as multiple
+**bands**, which contain the actual variable measurements, as well as
+quality assurance bands, which help to identify and improve the accuracy
+of the measurements.
+
+The `zarr_overview()` function gives us an quick overview of the data:
 
 ^^ just a small amount of this, because it’s huge!
 
