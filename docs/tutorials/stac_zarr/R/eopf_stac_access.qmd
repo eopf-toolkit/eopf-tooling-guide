@@ -83,7 +83,7 @@ Here, we can see that there is an entry `"collections"` within `stac_collections
 
 ```{r collections-details}
 stac_collections[["collections"]] |>
-  head(n = 3)
+  head(3)
 ```
 
 The Sentinel-2 Level-2A collection can be accessed by getting the first entry in `stac_collections()[["collections"]]`
@@ -156,7 +156,7 @@ We can look closer at individual items to see the metadata attached to them. Ite
 
 ```{r items-features}
 sentinel_2_l2a_collection_items[["features"]] |>
-  head(n = 2)
+  head(2)
 ```
 
 And an individual item contains a lot of information, such as its bounding box:
@@ -451,7 +451,7 @@ asset_metadata <- example_item[["assets"]] |>
     asset[c("title", "roles")]
   })
 
-asset_metadata
+head(asset_metadata, 5)
 ```
 
 Then, we can filter to only keep assets who have the `roles` "dataset" (these are Zarr groups):
@@ -474,7 +474,7 @@ zarr_arrays <- asset_metadata |>
 
 names(zarr_arrays)
 
-head(zarr_arrays, n = 3)
+head(zarr_arrays, 3)
 ```
 
 This leads into our next tutorial, where the assets will be used to access and work with Zarr data. 

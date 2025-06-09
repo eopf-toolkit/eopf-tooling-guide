@@ -135,7 +135,7 @@ and additional fields in the collections.
 
 ``` r
 stac_collections[["collections"]] |>
-  head(n = 3)
+  head(3)
 ```
 
     [[1]]
@@ -315,7 +315,7 @@ them. Items are stored under `"features"`:
 
 ``` r
 sentinel_2_l2a_collection_items[["features"]] |>
-  head(n = 2)
+  head(2)
 ```
 
     [[1]]
@@ -1039,7 +1039,7 @@ asset_metadata <- example_item[["assets"]] |>
     asset[c("title", "roles")]
   })
 
-asset_metadata
+head(asset_metadata, 5)
 ```
 
     $SR_10m
@@ -1080,134 +1080,6 @@ asset_metadata
 
     $B01_20m$roles
     [1] "data"        "reflectance"
-
-
-    $B02_10m
-    $B02_10m$title
-    [1] "Blue (band 2) - 10m"
-
-    $B02_10m$roles
-    [1] "data"        "reflectance"
-
-
-    $B03_10m
-    $B03_10m$title
-    [1] "Green (band 3) - 10m"
-
-    $B03_10m$roles
-    [1] "data"        "reflectance"
-
-
-    $B04_10m
-    $B04_10m$title
-    [1] "Red (band 4) - 10m"
-
-    $B04_10m$roles
-    [1] "data"        "reflectance"
-
-
-    $B05_20m
-    $B05_20m$title
-    [1] "Red edge 1 (band 5) - 20m"
-
-    $B05_20m$roles
-    [1] "data"        "reflectance"
-
-
-    $B06_20m
-    $B06_20m$title
-    [1] "Red edge 2 (band 6) - 20m"
-
-    $B06_20m$roles
-    [1] "data"        "reflectance"
-
-
-    $B07_20m
-    $B07_20m$title
-    [1] "Red edge 3 (band 7) - 20m"
-
-    $B07_20m$roles
-    [1] "data"        "reflectance"
-
-
-    $B08_10m
-    $B08_10m$title
-    [1] "NIR 1 (band 8) - 10m"
-
-    $B08_10m$roles
-    [1] "data"        "reflectance"
-
-
-    $B09_60m
-    $B09_60m$title
-    [1] "NIR 3 (band 9) - 60m"
-
-    $B09_60m$roles
-    [1] "data"        "reflectance"
-
-
-    $B11_20m
-    $B11_20m$title
-    [1] "SWIR 1 (band 11) - 20m"
-
-    $B11_20m$roles
-    [1] "data"        "reflectance"
-
-
-    $B12_20m
-    $B12_20m$title
-    [1] "SWIR 2 (band 12) - 20m"
-
-    $B12_20m$roles
-    [1] "data"        "reflectance"
-
-
-    $B8A_20m
-    $B8A_20m$title
-    [1] "NIR 2 (band 8A) - 20m"
-
-    $B8A_20m$roles
-    [1] "data"        "reflectance"
-
-
-    $SCL_20m
-    $SCL_20m$title
-    [1] "Scene classification map (SCL)"
-
-    $SCL_20m$roles
-    [1] "data"
-
-
-    $TCI_10m
-    $TCI_10m$title
-    [1] "True color image"
-
-    $TCI_10m$roles
-    [1] "data"
-
-
-    $WVP_10m
-    $WVP_10m$title
-    [1] "Water vapour (WVP)"
-
-    $WVP_10m$roles
-    [1] "data"
-
-
-    $product
-    $product$title
-    [1] "EOPF Product"
-
-    $product$roles
-    [1] "data"     "metadata"
-
-
-    $product_metadata
-    $product_metadata$title
-    [1] "Consolidated Metadata"
-
-    $product_metadata$roles
-    [1] "metadata"
 
 Then, we can filter to only keep assets who have the `roles` “dataset”
 (these are Zarr groups):
@@ -1260,7 +1132,7 @@ names(zarr_arrays)
     [15] "TCI_10m" "WVP_10m"
 
 ``` r
-head(zarr_arrays, n = 3)
+head(zarr_arrays, 3)
 ```
 
     $AOT_10m
