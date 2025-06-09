@@ -360,7 +360,7 @@ multiple_criteria_items <- stac_source |>
   ) |>
   ext_filter(
     platform == "sentinel-2a" &&
-    `eo:cloud_cover` <= 40
+      `eo:cloud_cover` <= 40
   ) |>
   post_request()
 
@@ -422,6 +422,57 @@ For example, the "product" asset will be useful to working with EOPF Sample Serv
 example_item |>
   assets_select(asset_names = "product") |>
   assets_url()
+```
+
+It is also helpful to know which assets actually contain Zarr data. Assets can be _Zarr groups_, which share common dimensions and coordinates, and contain Zarr arrays within them. An asset can also be an individual Zarr array.
+
+To look more at this, we will extract metadata attached to the Zarr assets. The `"assets"` entry of `example_item` contains a lot of useful information, but it is a bit difficult to read and manipulate:
+
+```{r item-assets}
+names(example_item[["assets"]])
+
+example_item[["assets"]][["SR_10m"]]
+```
+
+So, we will reformat it to be easier to work with. To do so, we first load the `tidyverse` package for data manipulation (installing it first, if necessary):
+
+```{r tidyverse, message = FALSE}
+# install.packages("tidyverse")
+library(tidyverse)
+```
+
+We will retain only the title and roles of each asset.
+
+```{r reformat-assets}
+asset_metadata <- example_item[["assets"]] |>
+  map(\(asset) {
+    asset[c("title", "roles")]
+  })
+
+asset_metadata
+```
+
+Then, we can filter to only keep assets who have the `roles` "dataset" (these are Zarr groups):
+
+```{r dataset-arrays}
+asset_metadata |>
+  keep(\(asset) {
+    "dataset" %in% asset[["roles"]]
+  })
+```
+
+Or to those who have `roles` "data", but _not_ "dataset" or "metadata" (these are individual Zarr arrays):
+
+```{r data-arrays}
+zarr_arrays <- asset_metadata |>
+  keep(\(asset) {
+    "data" %in% asset[["roles"]] & 
+      !("dataset" %in% asset[["roles"]] | "metadata" %in% asset[["roles"]])
+  })
+
+names(zarr_arrays)
+
+head(zarr_arrays, n = 3)
 ```
 
 This leads into our next tutorial, where the assets will be used to access and work with Zarr data. 

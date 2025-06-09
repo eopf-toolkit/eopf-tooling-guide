@@ -265,16 +265,16 @@ sentinel_2_l2a_collection_items
 
     ###Items
     - features (10 item(s)):
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T37WCV_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WWE_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WWD_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WVD_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WVC_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WQV_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPV_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPT_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPS_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WNV_20250609T123615
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T36WVD_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WPV_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WPU_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNV_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNU_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNT_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNS_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WMV_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WMT_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WMS_20250609T123015
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
@@ -292,16 +292,16 @@ stac_source |>
 
     ###Items
     - features (20 item(s)):
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T37WCV_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WWE_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WWD_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WVD_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WVC_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WQV_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPV_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPT_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPS_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WNV_20250609T123615
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T36WVD_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WPV_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WPU_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNV_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNU_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNT_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNS_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WMV_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WMT_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WMS_20250609T123015
       - ... with 10 more feature(s).
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
@@ -320,10 +320,10 @@ sentinel_2_l2a_collection_items[["features"]] |>
 
     [[1]]
     ###Item
-    - id: S2B_MSIL2A_20250609T101559_N0511_R065_T37WCV_20250609T123615
+    - id: S2A_MSIL2A_20250609T102701_N0511_R108_T36WVD_20250609T123015
     - collection: sentinel-2-l2a
-    - bbox: xmin: 33.18917, ymin: 71.26907, xmax: 35.08502, ymax: 72.05406
-    - datetime: 2025-06-09T10:15:59.024000Z
+    - bbox: xmin: 30.22032, ymin: 70.95486, xmax: 30.70856, ymax: 71.18551
+    - datetime: 2025-06-09T10:27:01.024000Z
     - assets: 
     SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
     - item's fields: 
@@ -331,10 +331,10 @@ sentinel_2_l2a_collection_items[["features"]] |>
 
     [[2]]
     ###Item
-    - id: S2B_MSIL2A_20250609T101559_N0511_R065_T36WWE_20250609T123615
+    - id: S2A_MSIL2A_20250609T102701_N0511_R108_T35WPV_20250609T123015
     - collection: sentinel-2-l2a
-    - bbox: xmin: 32.99942, ymin: 71.11435, xmax: 35.14735, ymax: 72.09958
-    - datetime: 2025-06-09T10:15:59.024000Z
+    - bbox: xmin: 29.76617, ymin: 71.07795, xmax: 32.46869, ymax: 72.07789
+    - datetime: 2025-06-09T10:27:01.024000Z
     - assets: 
     SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
     - item's fields: 
@@ -349,7 +349,7 @@ sentinel_2_l2a_first_item <- sentinel_2_l2a_collection_items[["features"]][[1]]
 sentinel_2_l2a_first_item[["bbox"]]
 ```
 
-    [1] 33.18917 71.26907 35.08502 72.05406
+    [1] 30.22032 70.95486 30.70856 71.18551
 
 And many more additional properties, with their properties under
 `"properties"` in an individual item.
@@ -536,16 +536,16 @@ stac_source |>
 
     ###Items
     - features (10 item(s)):
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T37WCV_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WWE_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WWD_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WVD_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T36WVC_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WQV_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPV_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPT_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPS_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WNV_20250609T123615
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T36WVD_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WPV_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WPU_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNV_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNU_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNT_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WNS_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WMV_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WMT_20250609T123015
+      - S2A_MSIL2A_20250609T102701_N0511_R108_T35WMS_20250609T123015
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
@@ -670,9 +670,9 @@ sentinel_2b_platform_results
       - S2B_MSIL2A_20250609T101559_N0511_R065_T36WVC_20250609T123615
       - S2B_MSIL2A_20250609T101559_N0511_R065_T35WQV_20250609T123615
       - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPV_20250609T123615
+      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPU_20250609T123615
       - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPT_20250609T123615
       - S2B_MSIL2A_20250609T101559_N0511_R065_T35WPS_20250609T123615
-      - S2B_MSIL2A_20250609T101559_N0511_R065_T35WNV_20250609T123615
     - assets: 
     AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
     - item's fields: 
@@ -731,7 +731,7 @@ stac_source |>
   get_first_item_property("eo:cloud_cover")
 ```
 
-    [1] 12.99299
+    [1] 31.35725
 
 If we want to search for items where `instruments` is “msi”, we use the
 `a_contains()` function. We need to use this instead of `==` because
@@ -780,7 +780,7 @@ multiple_criteria_items <- stac_source |>
   ) |>
   ext_filter(
     platform == "sentinel-2a" &&
-    `eo:cloud_cover` <= 40
+      `eo:cloud_cover` <= 40
   ) |>
   post_request()
 
@@ -819,10 +819,10 @@ sentinel_2_l2a_collection_items[["features"]][[1]]
 ```
 
     ###Item
-    - id: S2B_MSIL2A_20250609T101559_N0511_R065_T37WCV_20250609T123615
+    - id: S2A_MSIL2A_20250609T102701_N0511_R108_T36WVD_20250609T123015
     - collection: sentinel-2-l2a
-    - bbox: xmin: 33.18917, ymin: 71.26907, xmax: 35.08502, ymax: 72.05406
-    - datetime: 2025-06-09T10:15:59.024000Z
+    - bbox: xmin: 30.22032, ymin: 70.95486, xmax: 30.70856, ymax: 71.18551
+    - datetime: 2025-06-09T10:27:01.024000Z
     - assets: 
     SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
     - item's fields: 
@@ -902,6 +902,389 @@ example_item |>
 ```
 
     [1] "https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203.zarr"
+
+It is also helpful to know which assets actually contain Zarr data.
+Assets can be *Zarr groups*, which share common dimensions and
+coordinates, and contain Zarr arrays within them. An asset can also be
+an individual Zarr array.
+
+To look more at this, we will extract metadata attached to the Zarr
+assets. The `"assets"` entry of `example_item` contains a lot of useful
+information, but it is a bit difficult to read and manipulate:
+
+``` r
+names(example_item[["assets"]])
+```
+
+     [1] "SR_10m"           "SR_20m"           "SR_60m"           "AOT_10m"         
+     [5] "B01_20m"          "B02_10m"          "B03_10m"          "B04_10m"         
+     [9] "B05_20m"          "B06_20m"          "B07_20m"          "B08_10m"         
+    [13] "B09_60m"          "B11_20m"          "B12_20m"          "B8A_20m"         
+    [17] "SCL_20m"          "TCI_10m"          "WVP_10m"          "product"         
+    [21] "product_metadata"
+
+``` r
+example_item[["assets"]][["SR_10m"]]
+```
+
+    $gsd
+    [1] 10
+
+    $href
+    [1] "https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250517T085541_N0511_R064_T35QKA_20250517T112203.zarr/measurements/reflectance/r10m"
+
+    $type
+    [1] "application/vnd+zarr"
+
+    $bands
+    $bands[[1]]
+    $bands[[1]]$name
+    [1] "B02"
+
+    $bands[[1]]$common_name
+    [1] "blue"
+
+    $bands[[1]]$description
+    [1] "Blue (band 2)"
+
+    $bands[[1]]$center_wavelength
+    [1] 0.49
+
+    $bands[[1]]$full_width_half_max
+    [1] 0.098
+
+
+    $bands[[2]]
+    $bands[[2]]$name
+    [1] "B03"
+
+    $bands[[2]]$common_name
+    [1] "green"
+
+    $bands[[2]]$description
+    [1] "Green (band 3)"
+
+    $bands[[2]]$center_wavelength
+    [1] 0.56
+
+    $bands[[2]]$full_width_half_max
+    [1] 0.045
+
+
+    $bands[[3]]
+    $bands[[3]]$name
+    [1] "B04"
+
+    $bands[[3]]$common_name
+    [1] "red"
+
+    $bands[[3]]$description
+    [1] "Red (band 4)"
+
+    $bands[[3]]$center_wavelength
+    [1] 0.665
+
+    $bands[[3]]$full_width_half_max
+    [1] 0.038
+
+
+    $bands[[4]]
+    $bands[[4]]$name
+    [1] "B08"
+
+    $bands[[4]]$common_name
+    [1] "nir"
+
+    $bands[[4]]$description
+    [1] "NIR 1 (band 8)"
+
+    $bands[[4]]$center_wavelength
+    [1] 0.842
+
+    $bands[[4]]$full_width_half_max
+    [1] 0.145
+
+
+
+    $roles
+    [1] "data"        "reflectance" "dataset"    
+
+    $title
+    [1] "Surface Reflectance - 10m"
+
+    $`xarray:open_dataset_kwargs`
+    $`xarray:open_dataset_kwargs`$chunks
+    named list()
+
+    $`xarray:open_dataset_kwargs`$engine
+    [1] "eopf-zarr"
+
+    $`xarray:open_dataset_kwargs`$op_mode
+    [1] "native"
+
+So, we will reformat it to be easier to work with. To do so, we first
+load the `tidyverse` package for data manipulation (installing it first,
+if necessary):
+
+``` r
+# install.packages("tidyverse")
+library(tidyverse)
+```
+
+We will retain only the title and roles of each asset.
+
+``` r
+asset_metadata <- example_item[["assets"]] |>
+  map(\(asset) {
+    asset[c("title", "roles")]
+  })
+
+asset_metadata
+```
+
+    $SR_10m
+    $SR_10m$title
+    [1] "Surface Reflectance - 10m"
+
+    $SR_10m$roles
+    [1] "data"        "reflectance" "dataset"    
+
+
+    $SR_20m
+    $SR_20m$title
+    [1] "Surface Reflectance - 20m"
+
+    $SR_20m$roles
+    [1] "data"        "reflectance" "dataset"    
+
+
+    $SR_60m
+    $SR_60m$title
+    [1] "Surface Reflectance - 60m"
+
+    $SR_60m$roles
+    [1] "data"        "reflectance" "dataset"    
+
+
+    $AOT_10m
+    $AOT_10m$title
+    [1] "Aerosol optical thickness (AOT)"
+
+    $AOT_10m$roles
+    [1] "data"
+
+
+    $B01_20m
+    $B01_20m$title
+    [1] "Coastal aerosol (band 1) - 20m"
+
+    $B01_20m$roles
+    [1] "data"        "reflectance"
+
+
+    $B02_10m
+    $B02_10m$title
+    [1] "Blue (band 2) - 10m"
+
+    $B02_10m$roles
+    [1] "data"        "reflectance"
+
+
+    $B03_10m
+    $B03_10m$title
+    [1] "Green (band 3) - 10m"
+
+    $B03_10m$roles
+    [1] "data"        "reflectance"
+
+
+    $B04_10m
+    $B04_10m$title
+    [1] "Red (band 4) - 10m"
+
+    $B04_10m$roles
+    [1] "data"        "reflectance"
+
+
+    $B05_20m
+    $B05_20m$title
+    [1] "Red edge 1 (band 5) - 20m"
+
+    $B05_20m$roles
+    [1] "data"        "reflectance"
+
+
+    $B06_20m
+    $B06_20m$title
+    [1] "Red edge 2 (band 6) - 20m"
+
+    $B06_20m$roles
+    [1] "data"        "reflectance"
+
+
+    $B07_20m
+    $B07_20m$title
+    [1] "Red edge 3 (band 7) - 20m"
+
+    $B07_20m$roles
+    [1] "data"        "reflectance"
+
+
+    $B08_10m
+    $B08_10m$title
+    [1] "NIR 1 (band 8) - 10m"
+
+    $B08_10m$roles
+    [1] "data"        "reflectance"
+
+
+    $B09_60m
+    $B09_60m$title
+    [1] "NIR 3 (band 9) - 60m"
+
+    $B09_60m$roles
+    [1] "data"        "reflectance"
+
+
+    $B11_20m
+    $B11_20m$title
+    [1] "SWIR 1 (band 11) - 20m"
+
+    $B11_20m$roles
+    [1] "data"        "reflectance"
+
+
+    $B12_20m
+    $B12_20m$title
+    [1] "SWIR 2 (band 12) - 20m"
+
+    $B12_20m$roles
+    [1] "data"        "reflectance"
+
+
+    $B8A_20m
+    $B8A_20m$title
+    [1] "NIR 2 (band 8A) - 20m"
+
+    $B8A_20m$roles
+    [1] "data"        "reflectance"
+
+
+    $SCL_20m
+    $SCL_20m$title
+    [1] "Scene classification map (SCL)"
+
+    $SCL_20m$roles
+    [1] "data"
+
+
+    $TCI_10m
+    $TCI_10m$title
+    [1] "True color image"
+
+    $TCI_10m$roles
+    [1] "data"
+
+
+    $WVP_10m
+    $WVP_10m$title
+    [1] "Water vapour (WVP)"
+
+    $WVP_10m$roles
+    [1] "data"
+
+
+    $product
+    $product$title
+    [1] "EOPF Product"
+
+    $product$roles
+    [1] "data"     "metadata"
+
+
+    $product_metadata
+    $product_metadata$title
+    [1] "Consolidated Metadata"
+
+    $product_metadata$roles
+    [1] "metadata"
+
+Then, we can filter to only keep assets who have the `roles` “dataset”
+(these are Zarr groups):
+
+``` r
+asset_metadata |>
+  keep(\(asset) {
+    "dataset" %in% asset[["roles"]]
+  })
+```
+
+    $SR_10m
+    $SR_10m$title
+    [1] "Surface Reflectance - 10m"
+
+    $SR_10m$roles
+    [1] "data"        "reflectance" "dataset"    
+
+
+    $SR_20m
+    $SR_20m$title
+    [1] "Surface Reflectance - 20m"
+
+    $SR_20m$roles
+    [1] "data"        "reflectance" "dataset"    
+
+
+    $SR_60m
+    $SR_60m$title
+    [1] "Surface Reflectance - 60m"
+
+    $SR_60m$roles
+    [1] "data"        "reflectance" "dataset"    
+
+Or to those who have `roles` “data”, but *not* “dataset” or “metadata”
+(these are individual Zarr arrays):
+
+``` r
+zarr_arrays <- asset_metadata |>
+  keep(\(asset) {
+    "data" %in% asset[["roles"]] & 
+      !("dataset" %in% asset[["roles"]] | "metadata" %in% asset[["roles"]])
+  })
+
+names(zarr_arrays)
+```
+
+     [1] "AOT_10m" "B01_20m" "B02_10m" "B03_10m" "B04_10m" "B05_20m" "B06_20m"
+     [8] "B07_20m" "B08_10m" "B09_60m" "B11_20m" "B12_20m" "B8A_20m" "SCL_20m"
+    [15] "TCI_10m" "WVP_10m"
+
+``` r
+head(zarr_arrays, n = 3)
+```
+
+    $AOT_10m
+    $AOT_10m$title
+    [1] "Aerosol optical thickness (AOT)"
+
+    $AOT_10m$roles
+    [1] "data"
+
+
+    $B01_20m
+    $B01_20m$title
+    [1] "Coastal aerosol (band 1) - 20m"
+
+    $B01_20m$roles
+    [1] "data"        "reflectance"
+
+
+    $B02_10m
+    $B02_10m$title
+    [1] "Blue (band 2) - 10m"
+
+    $B02_10m$roles
+    [1] "data"        "reflectance"
 
 This leads into our next tutorial, where the assets will be used to
 access and work with Zarr data.
