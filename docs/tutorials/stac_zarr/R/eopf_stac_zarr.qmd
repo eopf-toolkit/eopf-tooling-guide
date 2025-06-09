@@ -21,14 +21,12 @@ An R environment is required to follow this tutorial, with R version >= 4.1.0. W
 
 ## Dependencies
 
-TODO -> is purrr needed?
-
-We will use the `rstac` package (for accessing the STAC catalog) and the `purrr` package (for data manipulation) in this tutorial. You can install them directly from CRAN:
+We will use the `rstac` package (for accessing the STAC catalog) and the `tidyverse` package (for data manipulation) in this tutorial. You can install them directly from CRAN:
 
 ```{r install-rstac}
 #| eval: false
 install.packages("rstac")
-install.packages("purrr")
+install.packages("tidyverse")
 ```
 
 We will also use the `Rarr` package. It must be installed from Bioconductor, so first install the `BiocManager` package:
@@ -50,7 +48,7 @@ Finally, load the packages into your environment:
 ```{r load, message=FALSE}
 #| cache: false
 library(rstac)
-library(purrr)
+library(tidyverse)
 library(Rarr)
 ```
 
@@ -94,15 +92,17 @@ If you try to run some of the examples below and receive a timeout error, please
 
 # Accessing Zarr data from the STAC Catalog
 
-The first step of accessing Zarr data is to find the correct asset within the EOPF Sample Service STAC catalog. The [first tutorial](TODO) goes into detail on this, so we recommend reviewing it if you have not already.
+The first step of accessing Zarr data is to understand the assets within the EOPF Sample Service STAC catalog. The [first tutorial](TODO) goes into detail on this, so we recommend reviewing it if you have not already.
 
 For the first part of this tutorial, we will be using data from the [Sentinel-2 Level-2A Collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a). We fetch the "product" asset under a given item, and can look at its URL:
 
 ```{r access-stac-product}
-product <- stac("https://stac.core.eopf.eodc.eu/") %>%
+item <- stac("https://stac.core.eopf.eodc.eu/") %>%
   collections(collection_id = "sentinel-2-l2a") %>%
   items(feature_id = "S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252") %>%
-  get_request() %>%
+  get_request()
+
+product <- item %>%
   assets_select(asset_names = "product")
 
 product_url <- product %>%
@@ -111,15 +111,9 @@ product_url <- product %>%
 product_url
 ```
 
-This URL is what we use to begin loading and analyzing the data.
+# WIP ----
 
-# Exploring Zarr data
-
-Zarr is a format that allows the storage of large, multidimensional array data. The data is divided into subsets known as **chunks**, and the Zarr format allows for efficient access to those chunks. 
-
-We cannot read all of the data in at once, nor is it typically desirable. As we see on the [Sentinel-2 Level-2A Collection page](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a), the data is split up into multiple **resolutions** as well as multiple **bands**, which contain the actual variable measurements, as well as quality assurance bands, which help to identify and improve the accuracy of the measurements.
-
-The `zarr_overview()` function gives us an quick overview of the data:
+The product is the "top level" Zarr asset:
 
 ```{r overview}
 #| eval: false
@@ -153,6 +147,95 @@ zarr_overview(product_url)
 #>   Endianness: little
 #>   Compressor: blosc
 ```
+
+But within it, there are other groups of Zarr assets, which are aligned and contain the same dimensions and coordinates, and contain Zarr arrays within them. Use the "dataset" role to access these:
+
+```{r dataset-assets}
+#| eval: false
+assets <- item[["assets"]]
+
+asset_metadata <- assets |>
+  map(\(asset) {
+    asset[c("title", "roles", "href")]
+  })
+
+datasets_assets <- asset_metadata %>%
+  keep(\(asset) "dataset" %in% asset[["roles"]]) %>%
+  names()
+
+example_asset <- datasets_assets[1]
+
+example_asset_url <- item %>%
+  assets_select(asset_names = example_asset) %>%
+  assets_url()
+
+zarr_overview(example_asset_url)
+# Error in stop(error) : bad error message
+```
+
+Ok that's not ideal... what about a "data"?
+
+```{r data-assets}
+data_assets <- asset_metadata %>%
+  keep(\(asset) "data" %in% asset[["roles"]] & !(any(c("dataset", "metadata") %in% asset[["roles"]]))) %>%
+  names()
+
+example_asset <- data_assets[1]
+
+example_asset_url <- item %>%
+  assets_select(asset_names = example_asset) %>%
+  assets_url()
+
+zarr_overview(example_asset_url)
+```
+
+Ok yes, these work
+
+Check more generally whether "datasets" fail at zarr_overview, while "data" succeed:
+
+```{r}
+asset_metadata %>%
+  map_dfr(\(x) {
+    x$roles <- case_when("metadata" %in% x$roles ~ "metadata", 
+    "dataset" %in% x$roles ~ "dataset",
+    "data" %in% x$roles ~ "data")
+    
+    # Try to get the overview
+    zarr_overview_safely <- safely(zarr_overview, otherwise = FALSE)
+    x$overview_succeeds <- zarr_overview_safely(x$href)[["result"]]
+    
+    as_tibble(x)
+  }) %>%
+  filter(!overview_succeeds)
+  
+```
+
+Yes, that's the case - the only ones that have a successful overview are the "product" on, and the datasets.
+
+But if surface reflectance etc are _groups_ of arrays, shouldn't they have some overview?
+
+Compare these things to their kwarg etc arguments
+
+```{r}
+assets %>%
+  keep(\(x) {"xarray:open_dataset_kwargs" %in% names(x)
+  }) %>%
+  names()
+```
+
+Only these ones can be opened as datasets, so I am prone to think they should also have a metadata file that describes the grouping structure... but anyways....
+
+Related issue: https://github.com/EOPF-Sample-Service/eopf-stac/issues/29
+
+# Scratch ----
+
+# Exploring Zarr data
+
+Zarr is a format that allows the storage of large, multidimensional array data. The data is divided into subsets known as **chunks**, and the Zarr format allows for efficient access to those chunks. 
+
+We cannot read all of the data in at once, nor is it typically desirable. As we see on the [Sentinel-2 Level-2A Collection page](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a), the data is split up into multiple **resolutions** as well as multiple **bands**, which contain the actual variable measurements, as well as quality assurance bands, which help to identify and improve the accuracy of the measurements.
+
+The `zarr_overview()` function gives us an quick overview of the data:
 
 ^^ just a small amount of this, because it's huge!
 
