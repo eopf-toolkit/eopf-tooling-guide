@@ -416,7 +416,7 @@ sr_10m <- example_item |>
 sr_10m
 ```
 
-In particular, the "product" asset will be useful to working with EOPF Sample Service Zarr data, as this is the top-level Zarr hierarchy and will be used to actually access Zarr data. We can select this asset, and then use `assets_url()` to get its URL:
+For example, the "product" asset will be useful to working with EOPF Sample Service Zarr data, as this is the top-level Zarr hierarchy. We can select this asset, and then use `assets_url()` to get its URL:
 
 ```{r asset-select-product}
 example_item |>
@@ -424,4 +424,4 @@ example_item |>
   assets_url()
 ```
 
-This leads into our next tutorial, where this asset and URL will be used to access and work with Zarr data. 
+This leads into our next tutorial, where the assets will be used to access and work with Zarr data. 
