@@ -1,6 +1,8 @@
 ---
 title: "How to for the EOPF Sample Service STAC catalog"
 format: md
+execute:
+  cache: true
 ---
 
 # Table of Contents
