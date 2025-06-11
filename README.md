@@ -13,7 +13,7 @@ The EOPF Toolkit provides a suite of libraries and plugins to facilitate working
 | STAC + Zarr             | EOPF Zarr Access from STAC                | In Development | [STAC+Zarr](docs/tutorials/stac_zarr.md)                                   |
 | GDAL Zarr Driver        | Enhanced GDAL driver for EOPF Zarr        | Planned        | TBD                                                                     |
 | QGIS Plugin             | Native QGIS integration for EOPF Zarr     | Planned        | TBD                                                                     |
-| R Integration           | R libraries for EOPF Zarr access          | Planned        | TBD                                                                     |
+| R Integration           | R libraries for EOPF Zarr access          | In Development | [R Tutorials](docs/tutorials/stac_zarr#r)                                |
 | Julia Integration       | Julia packages for EOPF Zarr              | Planned        | TBD                                                                     |
 | TiTiler Multidim        | Multidimensional data support for TiTiler | In Development | [titiler-multidim](https://github.com/developmentseed/titiler-multidim) |
 | Stackstac Optimizations | Enhanced Stackstac for EOPF               | Planned        | TBD                                                                     |
