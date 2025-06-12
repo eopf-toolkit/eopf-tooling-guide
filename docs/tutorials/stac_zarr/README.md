@@ -9,3 +9,9 @@ This directory contains resources to support identification and access of EOPF Z
 | Tutorial                  | Description                                                               | Location                                                   |
 | ------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | EOPF STAC Metadata Access | Demonstrates basic interaction with the EOPF Sample Service STAC catalog. | [python/eopf_stac_access.md](./python/eopf_stac_access.md) |
+
+### R
+
+| Tutorial                  | Description                                                               | Location                                                   |
+| ------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| How to for the EOPF Sample Service STAC catalog | Demonstrates basic interaction with the EOPF Sample Service STAC catalog. | [R/eopf_stac_access.md](./R/eopf_stac_access.md) |
