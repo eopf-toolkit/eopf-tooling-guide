@@ -5,9 +5,6 @@ Previous tutorials:
 
 ## Table of Contents
 
-> [!WARNING]
-> *** COMPLETE ME ***
-
 [Prerequisites](#prerequisites)<br />
 [Dependencies](#dependencies)<br />
 [Access Zarr Assets](#access-zarr-assets)<br />
@@ -17,12 +14,19 @@ Previous tutorials:
 [Zarr Structure](#zarr-structure)<br />
 [Array Chunk Sizes](#array-chunk-sizes)<br />
 [Variables and Attributes](#variables-and-attributes)<br />
-[Dimentions and Coordinates](#dimentions-and-coordinates)<br />
+[Dimensions and Coordinates](#dimensions-and-coordinates)<br />
 [Data Statistics](#data-statistics)<br />
 [Sentinel Missions](#sentinel-missions)<br />
 [Sentinel 1](#sentinel-1)<br />
 [Sentinel 2](#sentinel-2)<br />
 [Sentinel 3](#sentinel-3)<br />
+[The Benefits of EOPF Zarr Over SAFE](#the-benefits-of-eopf-zarr)<br />
+[Comparable SAFE Example](#comparable-safe-example)<br />
+[Optimisations](#optimisations)<br />
+[Chunk Size](#chunk-size)<br />
+[STAC Metadata and Zarr](#stac-metadata-and-zarr)<br />
+[Memory Utilisation](#memory-utilisation)<br />
+[Memory Limitations](#memory-limitations)<br />
 
 ## Prerequisites
 
@@ -108,7 +112,7 @@ print(
 
 ### Loading Zarr Datasets Using xarray
 
-Access the top-level Zarr group using xarray. xarray uses lazy-loading to avoid loading the entire 9GB data structure into memory at once and only fetches relevant array chunks when necessary.
+Access the top-level Zarr group using xarray. xarray uses lazy-loading to avoid loading the entire 9GB data structure into memory at once and only fetches relevant array chunks when necessary. See [Optimisations](#optimisations) for more information.
 
 ```python
 # The same asset can also be opened as a xarray.Dataset using the same kwargs.
@@ -172,7 +176,7 @@ for variable_name, variable in ds_sr10m.data_vars.items():
 # SR_10m has variable b08 (digital_counts): BOA reflectance from MSI acquisition at spectral band b08 833.0 nm
 ```
 
-#### Dimentions and Coordinates
+#### Dimensions and Coordinates
 
 Analyse dimensions and coordinates within the `/measurements/reflectance/r10m` Dataset.
 
@@ -204,7 +208,7 @@ for dimension_name in ds_sr10m.dims:
 
 #### Data Statistics
 
-Extract data statistics for the `/measurements/reflectance/r10m` Datasets `b08` variable within this scene.
+Extract data statistics for the `/measurements/reflectance/r10m` dataset `b08` variable within this scene.
 
 ```python
 # Access a single xarray DataArray from the Dataset.
@@ -220,7 +224,7 @@ print(
 
 ## Sentinel Missions
 
-This section provides short and complete examples referencing data from each of the different Sentinel missions.
+This section provides short and complete examples referencing data from each of the Sentinel missions.
 
 ### Sentinel 1
 
@@ -394,3 +398,129 @@ plt.show()
 
 ![Sentinel 3 GIFAPAR Plot](./images/sentinel-3.png "Sentinel 3 GIFAPAR Plot")
 
+## The Benefits of EOPF Zarr Over SAFE
+
+Prior to the introduction of EOPF Zarr ESA's Copernicus data were published and distributed using the [Standard Archive Format for Europe (SAFE)](https://earth.esa.int/eogateway/activities/safe-the-standard-archive-format-for-europe). Sentinel scenes could be downloaded as zip archives containing several data files and an XML manifest. The entire archive had to be downloaded before any scene data could be accessed, and in some scenarios this approach could be inefficient. 
+
+The Zarr data format is optimised for efficient data retrieval. Array data are segmented into one or more chunks, with a single Sentinel scene potentially comprising a large number of these chunks. Zarr can support more efficient data retrieval and processing. By using Zarr metadata, a data consumer can download only the chunks required for their use-case. With SAFE the minimum downloadable unit of data was the zip archive. With Zarr the minimum downloadable unit of data is a single chunk. There is no need to download all of a scene's data before processing work can begin and any required data can be lazy-loaded, i.e. only downloaded if and when required. Lazy-loading of data is more efficient both in terms of network bandwidth and compute resources.
+
+### Comparable SAFE Example
+
+The following example accesses the same 60 metre True Colour Image via SAFE as is accessed via EOPF Zarr with xarray in the [Sentinel 2 mission example](#sentinel-2). The EOPF Zarr example downloads fewer bytes and requires fewer lines of code.
+
+> [!NOTE]
+> This example requires authentication via credentials stored in environment variables.
+
+```python
+import os
+import tempfile
+import xml.etree.ElementTree as ET
+import zipfile
+
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+import requests
+from pystac_client import Client
+
+# Create an authentication token to use with the SAFE STAC API.
+# Requires the following environment variables to be set:
+# - CDSE_USERNAME: username for a valid Copernicus Dataspace account.
+# - CDSE_PASSWORD: password for the account.
+auth_response = requests.post(
+    "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
+    data={
+        "client_id": "cdse-public",
+        "username": os.environ["CDSE_USERNAME"],
+        "password": os.environ["CDSE_PASSWORD"],
+        "grant_type": "password",
+    },
+)
+assert auth_response.ok, f"auth failure {auth_response.text}"
+auth_token = auth_response.json()["access_token"]
+headers = {
+    "Authorization": f"Bearer {auth_token}",
+}
+
+client = Client.open("https://catalogue.dataspace.copernicus.eu/stac/")
+collection = client.get_collection(collection_id="SENTINEL-2")
+item = collection.get_item(
+    id="S2A_MSIL2A_20250605T104701_N0511_R051_T35WMU_20250605T125416.SAFE"
+)
+assert item is not None, "failed to fetch item"
+# The asset's href redirects to a download location. Determine this location manually
+# so that the "Authorization: Bearer ..." header is not stripped from the redirected request.
+target_href = requests.get(
+    item.assets["PRODUCT"].href, headers=headers, allow_redirects=False
+).headers["Location"]
+# Download the entire zip archive for the scene.
+tmp_dir_path = tempfile.mkdtemp()
+zip_path = os.path.join(tmp_dir_path, f"{item.id}.zip")
+print(f"Downloading {target_href}")
+# Downloading https://download.dataspace.copernicus.eu/odata/v1/Products(74252cb9-3567-4a49-8892-40f3a80ac52e)/$value
+with open(zip_path, "wb") as f:
+    for chunk in requests.get(target_href, headers=headers, stream=True).iter_content(
+        chunk_size=1000000
+    ):
+        print(".", end="")
+        f.write(chunk)
+print(" complete")
+# ........................................................................................................................................................................... complete
+archive = zipfile.ZipFile(zip_path)
+for entry in archive.namelist():
+    archive.extract(entry, tmp_dir_path)
+
+# Determine the file path to the TCI 60m data using the XML manifest and open that file.
+xml_manifest_path = os.path.join(tmp_dir_path, item.id, "manifest.safe")
+xml_tree = ET.parse(xml_manifest_path)
+file_location_element = xml_tree.getroot().find(
+    ".//dataObject[@ID='IMG_DATA_Band_TCI_60m_Tile1_Data']/byteStream/fileLocation"
+)
+assert file_location_element is not None, "failed to find TCI 60m data"
+tci_60m_file_path = os.path.join(
+    tmp_dir_path, item.id, file_location_element.get("href")
+)
+
+# Show data on screen.
+plt.imshow(mpimg.imread(tci_60m_file_path))
+plt.show()
+
+# Determine downloaded and unused data sizes.
+file_size = os.stat(tci_60m_file_path).st_size
+zip_size = os.stat(zip_path).st_size
+print(
+    "Used {file_size} of {zip_size} downloaded bytes ({used_percent}%)".format(
+        file_size=file_size,
+        zip_size=zip_size,
+        used_percent=round(file_size / zip_size * 100, 1),
+    )
+)
+# Used 445009 of 170176916 downloaded bytes (0.3%)
+```
+
+### Optimisations
+
+The transition from SAFE to EOPF Zarr presents opportunities for optimisations that may affect the data provider (ESA), the data consumer, or both.
+
+#### Chunk Size
+
+Zarr supports configurable chunk sizes for array data. A Zarr store may contain many n-dimensional arrays and each can support a unique chunk size. Each array will comprise one or more chunks of this size.
+
+Chunk size is determined by the data provider and, ideally, is configured such that the chunks downloaded by a data consumer to satisfy a given use-case include minimal data extraneous to that use-case.
+
+#### STAC Metadata and Zarr
+
+The relationship between STAC metadata and Zarr stores is a source of discussion and a number of different strategies are available, each with differing advantages and disadvantages. Additional context on this subject can be found in the [Cloud-Optimized Geospatial Formats Guide](https://guide.cloudnativegeo.org/cookbooks/zarr-stac-report/#new-approaches).
+
+The approach adopted for STAC metadata in the EOPF Sample STAC Service most closely aligns to the [many smaller Zarr stores](https://guide.cloudnativegeo.org/cookbooks/zarr-stac-report/#many-smaller-zarr-stores) approach.
+
+#### Memory Utilisation
+
+Zarr's support for lazy-loading array chunks carries opportunities for more efficient memory utilisation at the data consumer, and xarray supports this.
+
+Data consumers can help minimise memory usage by ensuring that when array values are accessed the array has been sliced as much as possible, for example using [`xarray.DataArray.sel`](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.sel.html), to ensure no unncessary chunks are loaded into memory. In the case of Dask data structures data may not be loaded into memory until values are computed.
+
+If applicable for a given use-case, data references can be nullified (or dereferenced) after use, or otherwise allowed to go out of scope, so that Python's Garbage Collector can reclaim available memory.
+
+##### Memory Limitations
+
+If a use-case requires more memory than the data consumer can support, even after optimisation efforts, it may be necessary to use a cloud-hosted compute environment with access to a larger pool of compute resources.
