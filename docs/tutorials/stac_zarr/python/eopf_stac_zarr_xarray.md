@@ -356,7 +356,7 @@ dt = xr.open_datatree(
 )
 ds = dt["/measurements"]
 # Measurements DataArrays do not have (latitude, longitude) dimensions and
-# instead use (rows, colums) dimensions to record data positions.
+# instead use (rows, columns) dimensions to record data positions.
 # Latitude and longitude are available as coordinates, and are functions of
 # (rows, columns), but this configuration is not compatible with matplotlib.
 # To plot measurements with a 2D chart we first must interpolate values to
