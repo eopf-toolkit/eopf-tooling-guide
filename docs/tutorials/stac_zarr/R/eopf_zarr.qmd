@@ -1,22 +1,11 @@
 ---
 title: "Access and Analyze EOPF STAC Zarr Data with R"
-format: md
+format:
+  md:
+     df-print: tibble
 execute:
   cache: true
 ---
-
-```{r setup}
-#| echo: false
-
-# To automatically print data frames as tibbles, without having to convert them inline
-print.data.frame <- function(x, ...) {
-  if (!inherits(x, "tbl_df")) {
-    x <- as_tibble(x)
-  }
-  print(x, ...)
-}
-```
-
 
 # Table of Contents
 
