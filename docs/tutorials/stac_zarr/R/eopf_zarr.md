@@ -436,13 +436,7 @@ satellite data.
 
 ``` r
 library(stars)
-```
 
-    Loading required package: sf
-
-    Linking to GEOS 3.13.0, GDAL 3.8.5, PROJ 9.5.1; sf_use_s2() is TRUE
-
-``` r
 # Assume:
 # - owi_dir: matrix of wind direction (167 × 255)
 # - owi_long: matrix of longitude (167 × 255)
@@ -456,4 +450,4 @@ s <- st_as_stars(s, curvilinear = list(X1 = owi_long, X2 = owi_lat))
 plot(s, as_points = FALSE, axes = TRUE, breaks = "equal", border = NA)
 ```
 
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/unnamed-chunk-7-1.png)
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/owi-vis-1.png)

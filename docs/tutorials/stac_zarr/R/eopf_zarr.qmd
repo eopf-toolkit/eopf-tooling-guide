@@ -261,7 +261,7 @@ owi_wind_direction[1:5, 1:5]
 
 Visualisation with stars, first convert to curvilinear grid, common in satellite data.
 
-```{r}
+```{r owi-vis}
 library(stars)
 
 # Assume:
