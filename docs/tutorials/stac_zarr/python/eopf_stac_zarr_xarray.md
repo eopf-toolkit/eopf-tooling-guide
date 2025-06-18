@@ -402,7 +402,7 @@ plt.show()
 
 Prior to the introduction of EOPF Zarr ESA's Copernicus data were published and distributed using the [Standard Archive Format for Europe (SAFE)](https://earth.esa.int/eogateway/activities/safe-the-standard-archive-format-for-europe). Sentinel scenes could be downloaded as zip archives containing several data files and an XML manifest. The entire archive had to be downloaded before any scene data could be accessed, and in some scenarios this approach could be inefficient. 
 
-The Zarr data format is optimised for efficient data retrieval. Array data are segmented into one or more chunks, with a single Sentinel scene potentially comprising a large number of these chunks. Zarr can support more efficient data retrieval and processing. By using Zarr metadata, a data consumer can download only the chunks required for their use-case. With SAFE the minimum downloadable unit of data was the zip archive. With Zarr the minimum downloadable unit of data is a single chunk. There is no need to download all of a scene's data before processing work can begin and any required data can be lazy-loaded, i.e. only downloaded if and when required. Lazy-loading of data is more efficient both in terms of network bandwidth and compute resources.
+The Zarr data format is optimised for efficient data retrieval. Array data are segmented into one or more chunks, with a single Sentinel scene potentially comprising a large number of these chunks. Zarr can support more efficient data retrieval and processing. By using Zarr metadata, a data consumer can download only the chunks required for their use-case. With SAFE the minimum downloadable unit of data was the zip archive. With Zarr the minimum downloadable unit of data is a single chunk. There is no need to download all of a scene's data before processing work can begin and any required data can be lazy-loaded, i.e. only downloaded if and when required. Lazy-loading of data is more efficient both in terms of network bandwidth and compute resources. See [
 
 ### Comparable SAFE Example
 
@@ -483,19 +483,13 @@ tci_60m_file_path = os.path.join(
 # Show data on screen.
 plt.imshow(mpimg.imread(tci_60m_file_path))
 plt.show()
-
-# Determine downloaded and unused data sizes.
-file_size = os.stat(tci_60m_file_path).st_size
-zip_size = os.stat(zip_path).st_size
-print(
-    "Used {file_size} of {zip_size} downloaded bytes ({used_percent}%)".format(
-        file_size=file_size,
-        zip_size=zip_size,
-        used_percent=round(file_size / zip_size * 100, 1),
-    )
-)
-# Used 445009 of 170176916 downloaded bytes (0.3%)
 ```
+
+### Data Retrieval and Network Efficiency
+
+The [SAFE example](#comparable-safe-example) downloads a 170 MB zip archive file, extracts it to a temporary location, and ultimately only accesses 0.45 MB of that data. 99.7% of fetched data are unused in this example. Other use-cases may download smaller archives, or use more of the archive's data, but in many use-cases it is likely that significant network bandwidth and storage are wasted.
+
+The EOPF Zarr [Sentinel 2 mission example](#sentinel-2) is more efficient. When accessing the EOPF Product asset as a `xarray.DataTree` type, xarray requests the asset's `.zmetadata` consolidated metadata file and the first compressed chunk of each array. This process downloads 0.61 MB. When the TCI plot is shown, xarray lazy-loads a further 0.63 MB of array data. In total only 1.24 MB of data are downloaded. If TCI array data were loaded directly from the relevant STAC item asset href as a `xarray.DataArray` type, and not from a larger `xarray.DataTree` type, the initial 0.61 MB would not be required. This comparison demonstrates the innate network and storage efficiencies of cloud-native data structures.
 
 ### Optimisations
 
