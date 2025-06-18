@@ -23,11 +23,8 @@
 
 This tutorial will explore how to access the [EOPF Sample Service STAC
 catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using
-R.
-
-TODO - include the content in
-https://github.com/eopf-toolkit/eopf-tooling-guide/blob/EOPF-47/docs/tutorials/stac_zarr.md?
-Link to it?
+R. For more background on STAC, please view the [introductory STAC and
+Zarr](../../stac_zarr.md) documentation.
 
 # Prerequisites
 
