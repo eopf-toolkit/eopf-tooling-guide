@@ -23,9 +23,7 @@ execute:
 
 # Introduction
 
-This tutorial will explore how to access the [EOPF Sample Service STAC catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using R.
-
-TODO - include the content in https://github.com/eopf-toolkit/eopf-tooling-guide/blob/EOPF-47/docs/tutorials/stac_zarr.md? Link to it?
+This tutorial will explore how to access the [EOPF Sample Service STAC catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using R. For more background on STAC, please view the [introductory STAC and Zarr](../../stac_zarr.md) documentation.
 
 # Prerequisites
 
@@ -203,13 +201,13 @@ If the goal is to access data from a specific mission, it is best to _search_ wi
 
 To narrow down items based on a bounding box or time frame, the `stac_search()` function is used. The collection ID is provided in the `collections()` argument, and bounding box and time frame are `bbox` and `datetime`, respectively.
 
-The bounding box values take the sequence of: minimum longitude, minimum latitude, maximum longitude, and maximum latitude, and their coordinate reference system is WGS84.
+The bounding box values take the sequence of: minimum longitude, minimum latitude, maximum longitude, and maximum latitude, and their coordinate reference system is WGS84. For items whose bounding boxes intersect with Vienna: 
 
 ```{r search-items-bbox}
 stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
-    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314)
+    bbox = c(16.1736, 48.1157, 16.5897, 48.3254)
   ) |>
   get_request()
 ```
@@ -357,8 +355,8 @@ You can combine multiple filter criteria by specifying them together. We have al
 multiple_criteria_items <- stac_source |>
   stac_search(
     collections = "sentinel-2-l2a",
-    bbox = c(-47.02148, -17.35063, -42.53906, -12.98314),
-    datetime = "../2025-01-01T23:00:00Z"
+    bbox = c(16.1736, 48.1157, 16.5897, 48.3254),
+    datetime = "../2025-06-01T23:00:00Z"
   ) |>
   ext_filter(
     platform == "sentinel-2a" &&
