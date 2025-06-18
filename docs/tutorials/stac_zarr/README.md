@@ -10,3 +10,9 @@ This directory contains resources to support identification and access of EOPF Z
 | -------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
 | STAC Metadata Access | Basic interaction with the EOPF Sample Service STAC catalog. | [python/eopf_stac_access.md](./python/eopf_stac_access.md) |
 | Zarr Data Loading    | Load Zarr datasets referenced in STAC items using xarray.    | [python/eopf_stac_zarr_xarray.md](./python/eopf_stac_zarr_xarray.md)
+
+### R
+
+| Tutorial                  | Description                                                               | Location                                                   |
+| ------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| How to for the EOPF Sample Service STAC catalog | Demonstrates basic interaction with the EOPF Sample Service STAC catalog. | [R/eopf_stac_access.md](./R/eopf_stac_access.md) |
