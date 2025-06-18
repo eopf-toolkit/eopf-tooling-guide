@@ -128,16 +128,17 @@ for collection in all_collections:
 
 #### Spatial Extent (Bounding Box)
 
-Search for items whose spatial extents intersect central Paris.
+Search for items whose spatial extents intersect Vienna.
 
 ```python
+bbox_vienna = (
+    16.1736,
+    48.1157,
+    16.5897,
+    48.3254,
+)
 bbox_search_results_sample = client.search(
-    bbox=(
-        2.23949,
-        48.81410,
-        2.43896,
-        48.90546,
-    ),
+    bbox=bbox_vienna,
     max_items=1,
 )
 for item in bbox_search_results_sample.items():
@@ -146,7 +147,7 @@ for item in bbox_search_results_sample.items():
             id=item.id, bbox=item.bbox
         )
     )
-# bbox search result item ID: S2C_MSIL2A_20250524T104641_N0511_R051_T31UDQ_20250524T163212, BBOX: [[1.614272368185704, 48.6570207750582, 3.135213595780942, 49.652643868751746]]
+# bbox search result item ID: S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605, BBOX: [[16.3343313489668, 47.73104447774509, 17.852438708473066, 48.74498411169783]]
 ```
 
 #### Temporal Extent (Time Range)
@@ -155,7 +156,7 @@ Search for items whose datetime intersects a given day (UTC time).
 
 ```python
 time_search_results_sample = client.search(
-    datetime="2025-05-22T00:00:00Z/2025-05-22T23:59:59.999999Z", max_items=1
+    datetime="2025-06-17T00:00:00Z/2025-06-17T23:59:59.999999Z", max_items=1
 )
 for item in time_search_results_sample.items():
     print(
@@ -163,7 +164,7 @@ for item in time_search_results_sample.items():
             id=item.id, datetime=item.datetime
         )
     )
-# time search result item ID: S1A_IW_GRDH_1SDV_20250522T235715_20250522T235740_059314_075C7F_3BAF, datetime: 2025-05-22 23:57:15.852610+00:00
+# time search result item ID: S2B_MSIL1C_20250617T131029_N0511_R038_T25TFF_20250617T134831, datetime: 2025-06-17 13:10:29.024000+00:00
 ```
 
 #### Platform
@@ -172,7 +173,7 @@ Search for items whose platform is 'sentinel-2b' using [CQL2-JSON](https://docs.
 
 ```python
 platform_search_results_sample = client.search(
-    filter={"op": "eq", "args": [{"property": "platform"}, "sentinel-2b"]},
+    filter={"op": "eq", "args": [{"property": "platform"}, "sentinel-2a"]},
     filter_lang="cql2-json",
     max_items=1,
 )
@@ -182,7 +183,7 @@ for item in platform_search_results_sample.items():
             id=item.id, platform=item.properties["platform"]
         )
     )
-# platform search result item ID: S2B_MSIL2A_20250525T192909_N0511_R142_T09UXB_20250525T231223, platform: sentinel-2b
+# platform search result item ID: S2A_MSIL2A_20250617T100551_N0511_R079_T32QPF_20250617T132932, platform: sentinel-2a
 ```
 
 #### Instruments
@@ -201,7 +202,7 @@ for item in instruments_search_results_sample.items():
             id=item.id, instruments=item.properties["instruments"]
         )
     )
-# instruments search result item ID: S2A_MSIL1C_20250526T091041_N0511_R050_T37WEP_20250526T095612, instruments: ['msi']
+# instruments search result item ID: S2B_MSIL1C_20250617T131029_N0511_R038_T25TFF_20250617T134831, instruments: ['msi']
 ```
 
 #### Combined Search Criteria
@@ -210,17 +211,12 @@ Search with all prior criteria combined.
 
 ```python
 combined_search_results_sample = client.search(
-    bbox=(
-        2.23949,
-        48.81410,
-        2.43896,
-        48.90546,
-    ),
-    datetime="2025-05-22T00:00:00Z/2025-05-22T23:59:59.999999Z",
+    bbox=bbox_vienna,
+    datetime="2025-06-17T00:00:00Z/2025-06-17T23:59:59.999999Z",
     filter={
         "op": "and",
         "args": [
-            {"op": "eq", "args": [{"property": "platform"}, "sentinel-2b"]},
+            {"op": "eq", "args": [{"property": "platform"}, "sentinel-2a"]},
             {"op": "A_CONTAINS", "args": [{"property": "instruments"}, ["msi"]]},
         ],
     },
@@ -236,7 +232,7 @@ for item in combined_search_results_sample.items():
             instruments=item.properties["instruments"],
         )
     )
-# combined search result item ID: S2B_MSIL2A_20250522T105619_N0511_R094_T31UDQ_20250522T121018, BBOX: [1.614272368185704, 48.6570207750582, 2.965285229911794, 49.65172617595335], datetime: 2025-05-22 10:56:19.024000+00:00, platform: sentinel-2b, instruments: ['msi']
+# combined search result item ID: S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605, BBOX: [16.3343313489668, 47.73104447774509, 17.852438708473066, 48.74498411169783], datetime: 2025-06-17 09:50:51.024000+00:00, platform: sentinel-2a, instruments: ['msi']
 ```
 
 ### STAC Item Metadata
@@ -248,7 +244,7 @@ sentinel_2_l2a_collection = cast(
     CollectionClient, client.get_collection(collection_id="sentinel-2-l2a")
 )
 sample_item = sentinel_2_l2a_collection.get_item(
-    id="S2B_MSIL2A_20250522T105619_N0511_R094_T32WPE_20250522T121018"
+    id="S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605"
 )
 assert sample_item is not None, "Expected item does not exist"
 print("Sample item {id}".format(id=sample_item.id))
@@ -264,10 +260,10 @@ for asset_name, asset in sample_item.get_assets(media_type=MediaType.ZARR).items
             asset_name=asset_name, asset_href=asset.href
         )
     )
-# Sample item S2B_MSIL2A_20250522T105619_N0511_R094_T32WPE_20250522T121018
-#  - Datetime: 2025-05-22 10:56:19.024000+00:00
+# Sample item S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605
+#  - Datetime: 2025-06-17 09:50:51.024000+00:00
 #  - Processing Level: L2A
-#  - Zarr asset SR_10m at https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T105619_N0511_R094_T32WPE_20250522T121018.zarr/measurements/reflectance/r10m
-#  - Zarr asset SR_20m at https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T105619_N0511_R094_T32WPE_20250522T121018.zarr/measurements/reflectance/r20m
+#  - Zarr asset SR_10m at https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605.zarr/measurements/reflectance/r10m
+#  - Zarr asset SR_20m at https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605.zarr/measurements/reflectance/r20m
 # ...
 ```
