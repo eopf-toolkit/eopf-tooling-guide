@@ -9,10 +9,10 @@ This document provides an overview of the tools available in the EOPF Toolkit. T
 
 ## Available Tools
 
-- **Python Libraries:** For accessing and processing EOPF Zarr data.
-- **QGIS Plugin:** For visualizing EOPF data in QGIS.
-- **GDAL Driver:** For compatibility with GDAL-based workflows.
-
+- **Python Libraries:** For accessing and processing EOPF Zarr STAC.
+    - pystac-client
+- **R Libraries:** For accessing and processing EOPF Zarr STAC.
+    - rstac
 ## Tutorials
 
 This section provides links to tutorials that will help you get started with the EOPF Toolkit.
