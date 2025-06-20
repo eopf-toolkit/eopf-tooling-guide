@@ -4,7 +4,7 @@
 
 ## Table of Contents
 [Context and Motivation](#context-and-motivation)<br />
-[Learning Goals](#learning-goals)<br />
+[Goals](#learning-goals)<br />
 [STAC](#stac)<br/>
 [STAC API](#stac-api)<br/>
 [EOPF Service](#eopf-service)<br/>
