@@ -103,9 +103,9 @@ error, please ensure that you have run the above code block.
 # Accessing Zarr data from the STAC Catalog
 
 The first step of accessing Zarr data is to understand the assets within
-the EOPF Sample Service STAC catalog. The [first tutorial](TODO) goes
-into detail on this, so we recommend reviewing it if you have not
-already.
+the EOPF Sample Service STAC catalog. The [first
+tutorial](./eopf_stac_access.qmd) goes into detail on this, so we
+recommend reviewing it if you have not already.
 
 For the first part of this tutorial, we will be using data from the
 [Sentinel-2 Level-2A
@@ -134,8 +134,8 @@ The product is the “top level” Zarr asset, which contains the full Zarr
 product hierarchy. We can use `zarr_overview()` to get an overview of
 it, setting `as_data_frame` to `TRUE` so that we can see the entries in
 a data frame instead of printed directly to the console. Each entry is a
-Zarr array; we remove `product_url` to get a better idea of what each
-array is.
+Zarr array; we remove `product_url` from the path to get a better idea
+of what each array is.
 
 ``` r
 zarr_store <- product_url %>%
@@ -163,12 +163,33 @@ zarr_store
 
 This shows us the path to access the Zarr array, the number of chunks it
 contains, the type of data, as well as its dimensions and chunking
-structure. For example, for the `measurements/reflectance/r10m/b02`
-array:
+structure.
+
+We can also look at overviews of individual arrays. First, let’s narrow
+down to measurements taken at 10m resolution:
 
 ``` r
-zarr_store %>%
-  filter(array == "/measurements/reflectance/r10m/b02") %>%
+r10m <- zarr_store %>%
+  filter(str_starts(array, "/measurements/reflectance/r10m/"))
+
+r10m
+```
+
+    # A tibble: 6 × 7
+      array                       path  nchunks data_type compressor dim   chunk_dim
+      <chr>                       <chr>   <dbl> <chr>     <chr>      <lis> <list>   
+    1 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
+    2 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
+    3 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
+    4 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
+    5 /measurements/reflectance/… http…       1 int64     blosc      <int> <int [1]>
+    6 /measurements/reflectance/… http…       1 int64     blosc      <int> <int [1]>
+
+Then, we select the B02 array and examine its dimensions and chuning:
+
+``` r
+r10m %>%
+  filter(str_ends(array, "b02")) %>%
   select(path, nchunks, dim, chunk_dim) %>%
   as.list()
 ```
@@ -194,11 +215,11 @@ We can also see an overview of individual arrays using
 in a more digestible way:
 
 ``` r
-b02_r10m <- zarr_store %>%
-  filter(array == "/measurements/reflectance/r10m/b02") %>%
+r10m_b02 <- r10m %>%
+  filter(str_ends(array, "b02")) %>%
   pull(path)
 
-b02_r10m %>%
+r10m_b02 %>%
   zarr_overview()
 ```
 
@@ -220,6 +241,8 @@ individually, without loading the entire array. In this case, there are
 36 chunks in total, with 6 along each of the dimensions, each of size
 1830 x 1830.
 
+## Reading Zarr data
+
 To read in Zarr data, we use `read_zarr_array()`, and can pass a list to
 the `index` argument, describing which elements we want to extract,
 along each dimension. Since this array is two-dimensional, we can think
@@ -227,7 +250,7 @@ of the dimensions as rows and columns of the data. For example, to
 select the first 10 rows and the first 5 columns:
 
 ``` r
-b02_r10m %>%
+r10m_b02 %>%
   read_zarr_array(list(1:10, 1:5))
 ```
 
@@ -246,7 +269,7 @@ b02_r10m %>%
 Or, to select rows rows 8425 to 8430 and columns 1 to 5:
 
 ``` r
-b02_r10m %>%
+r10m_b02 %>%
   read_zarr_array(list(8425:8430, 1:5))
 ```
 
@@ -258,11 +281,98 @@ b02_r10m %>%
     [5,] 9432 9376 9368 9272 9240
     [6,] 9440 9400 9336 9336 9352
 
-TODO: Use the info Tom did
-(https://github.com/eopf-toolkit/eopf-tooling-guide/blob/EOPF-48-tutorial-2/docs/tutorials/stac_zarr/python/eopf_stac_zarr_xarray.md#variables-and-attributes)
-to describe what these units actually are etc.
+## Zarr data coordinates
 
-With EOPF data, some measurements are available at multiple dimensions.
+Similarly, we can read in the `x` and `y` coordinates corresponding to
+data at 10m resolution. These `x` and `y` coordinates do not correspond
+to latitude and longitude–to understand the coordinate reference system
+used in each data set, we access the “`proj:espg`” property of the STAC
+item. In this case, the coordinate reference system is
+[EPSG:32626](https://epsg.io/32626), which represents metres from the
+UTM zone’s origin.
+
+``` r
+item[["properties"]][["proj:code"]]
+```
+
+    [1] "EPSG:32626"
+
+We can see that `x` and `y` are one dimensional:
+
+``` r
+r10m_x <- r10m %>%
+  filter(str_ends(array, "x")) %>%
+  pull(path)
+
+r10m_x %>%
+  zarr_overview()
+```
+
+    Type: Array
+    Path: https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr/measurements/reflectance/r10m/x/
+    Shape: 10980
+    Chunk Shape: 10980
+    No. of Chunks: 1 (1)
+    Data Type: int64
+    Endianness: little
+    Compressor: blosc
+
+``` r
+r10m_y <- r10m %>%
+  filter(str_ends(array, "y")) %>%
+  pull(path)
+
+r10m_y %>%
+  zarr_overview()
+```
+
+    Type: Array
+    Path: https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr/measurements/reflectance/r10m/y/
+    Shape: 10980
+    Chunk Shape: 10980
+    No. of Chunks: 1 (1)
+    Data Type: int64
+    Endianness: little
+    Compressor: blosc
+
+Which means that, when combined, they form a grid that describes the
+location of each point in the 2-dimensional measurements, such as B02.
+We will go into this more in the examples below.
+
+The `x` and `y` dimensions can be read in using the same logic: by
+describing which elements we want to extract. Since there is only one
+dimension, we only need to supply one entry in the indexing list:
+
+``` r
+r10m_x %>%
+  read_zarr_array(list(1:5))
+```
+
+    [1] 399965 399975 399985 399995 400005
+
+Or, we can read in the whole array and view its first few values with
+`head()`. Of course, reading in the whole array, rather than a small
+section of it, will take longer.
+
+``` r
+r10m_x %>%
+  read_zarr_array() %>%
+  head(5)
+```
+
+    [1] 399965 399975 399985 399995 400005
+
+``` r
+r10m_y %>%
+  read_zarr_array() %>%
+  head(5)
+```
+
+    [1] 4600015 4600005 4599995 4599985 4599975
+
+## Data at different resolutions
+
+With EOPF data, some measurements are available at multiple resolutions.
 For example, we can see that the B02 spectral band is available at 10m,
 20m, and 60m resolution:
 
