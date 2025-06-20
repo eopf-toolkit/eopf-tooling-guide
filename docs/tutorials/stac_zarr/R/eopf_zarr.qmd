@@ -2,7 +2,7 @@
 title: "Access and Analyze EOPF STAC Zarr Data with R"
 format:
   md:
-     df-print: tibble
+    df-print: tibble
 execute:
   cache: true
 ---
@@ -12,6 +12,11 @@ execute:
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
   - [Dependencies](#dependencies)
+  - [Fixes to the Rarr package](#fixes-to-the-rarr-package)
+- [Access Zarr data from the STAC catalog](#access-zarr-data-from-the-stac-catalog)
+- [Read Zarr data](#read-zarr-data)
+  - [Coordinates](#coordinates)
+  - [Different resolutions](#different-resolutions)
 
 # Introduction
 
@@ -92,7 +97,7 @@ This function overwrites the existing one in `Rarr`, and allows us to continue w
 
 If you try to run some of the examples below and receive a timeout error, please ensure that you have run the above code block.
 
-# Accessing Zarr data from the STAC Catalog
+# Access Zarr data from the STAC Catalog
 
 The first step of accessing Zarr data is to understand the assets within the EOPF Sample Service STAC catalog. The [first tutorial](/eopf_stac_access.qmd) goes into detail on this, so we recommend reviewing it if you have not already.
 
@@ -156,11 +161,9 @@ r10m_b02 %>%
   zarr_overview()
 ```
 
-# Zarr structure
-
 The above overview tells us that the data is two-dimensional, with dimensions 10980 x 10980. Zarr data is split up into _chunks_, which are smaller, independent piece of the larger array. Chunks can be accessed individually, without loading the entire array. In this case, there are 36 chunks in total, with 6 along each of the dimensions, each of size 1830 x 1830.
 
-## Reading Zarr data
+# Read Zarr data
 
 To read in Zarr data, we use `read_zarr_array()`, and can pass a list to the `index` argument, describing which elements we want to extract, along each dimension. Since this array is two-dimensional, we can think of the dimensions as rows and columns of the data. For example, to select the first 10 rows and the first 5 columns:
 
@@ -176,7 +179,7 @@ r10m_b02 %>%
   read_zarr_array(list(8425:8430, 1:5))
 ```
 
-## Zarr data coordinates
+## Coordinates
 
 Similarly, we can read in the `x` and `y` coordinates corresponding to data at 10m resolution. These `x` and `y` coordinates do not correspond to latitude and longitude--to understand the coordinate reference system used in each data set, we access the "`proj:espg`" property of the STAC item. In this case, the coordinate reference system is [EPSG:32626](https://epsg.io/32626), which represents metres from the UTM zone's origin.
 
@@ -223,7 +226,7 @@ r10m_y %>%
   head(5)
 ```
 
-## Data at different resolutions
+## Different resolutions
 
 With EOPF data, some measurements are available at multiple resolutions. For example, we can see that the B02 spectral band is available at 10m, 20m, and 60m resolution:
 
@@ -246,7 +249,9 @@ b02 %>%
   pull(dim)
 ```
 
-# WIP ----
+# Examples
+
+## Sentinel 1
 
 Want to look at owi:
 
@@ -337,3 +342,7 @@ s <- st_as_stars(s, curvilinear = list(X1 = owi_long, X2 = owi_lat))
 
 plot(s, as_points = FALSE, axes = TRUE, breaks = "equal", border = NA)
 ```
+
+## Sentinel 2
+
+## Sentinel 3

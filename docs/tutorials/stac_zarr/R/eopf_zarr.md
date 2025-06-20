@@ -6,6 +6,12 @@
 -   [Introduction](#introduction)
 -   [Prerequisites](#prerequisites)
     -   [Dependencies](#dependencies)
+    -   [Fixes to the Rarr package](#fixes-to-the-rarr-package)
+-   [Access Zarr data from the STAC
+    catalog](#access-zarr-data-from-the-stac-catalog)
+-   [Read Zarr data](#read-zarr-data)
+    -   [Coordinates](#coordinates)
+    -   [Different resolutions](#different-resolutions)
 
 # Introduction
 
@@ -100,7 +106,7 @@ continue with the analysis.
 If you try to run some of the examples below and receive a timeout
 error, please ensure that you have run the above code block.
 
-# Accessing Zarr data from the STAC Catalog
+# Access Zarr data from the STAC Catalog
 
 The first step of accessing Zarr data is to understand the assets within
 the EOPF Sample Service STAC catalog. The [first
@@ -232,8 +238,6 @@ r10m_b02 %>%
     Endianness: little
     Compressor: blosc
 
-# Zarr structure
-
 The above overview tells us that the data is two-dimensional, with
 dimensions 10980 x 10980. Zarr data is split up into *chunks*, which are
 smaller, independent piece of the larger array. Chunks can be accessed
@@ -241,7 +245,7 @@ individually, without loading the entire array. In this case, there are
 36 chunks in total, with 6 along each of the dimensions, each of size
 1830 x 1830.
 
-## Reading Zarr data
+# Read Zarr data
 
 To read in Zarr data, we use `read_zarr_array()`, and can pass a list to
 the `index` argument, describing which elements we want to extract,
@@ -281,7 +285,7 @@ r10m_b02 %>%
     [5,] 9432 9376 9368 9272 9240
     [6,] 9440 9400 9336 9336 9352
 
-## Zarr data coordinates
+## Coordinates
 
 Similarly, we can read in the `x` and `y` coordinates corresponding to
 data at 10m resolution. These `x` and `y` coordinates do not correspond
@@ -370,7 +374,7 @@ r10m_y %>%
 
     [1] 4600015 4600005 4599995 4599985 4599975
 
-## Data at different resolutions
+## Different resolutions
 
 With EOPF data, some measurements are available at multiple resolutions.
 For example, we can see that the B02 spectral band is available at 10m,
