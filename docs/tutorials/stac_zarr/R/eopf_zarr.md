@@ -125,7 +125,7 @@ URL:
 ``` r
 item <- stac("https://stac.core.eopf.eodc.eu/") %>%
   collections(collection_id = "sentinel-2-l2a") %>%
-  items(feature_id = "S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252") %>%
+  items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") %>%
   get_request()
 
 product <- item %>%
@@ -137,7 +137,7 @@ product_url <- product %>%
 product_url
 ```
 
-    [1] "https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr"
+    [1] "https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr"
 
 The product is the “top level” Zarr asset, which contains the full Zarr
 product hierarchy. We can use `zarr_overview()` to get an overview of
@@ -171,7 +171,7 @@ zarr_store
      4 /conditions/geometry/mean… http…       1 float64   blosc      <int> <int [1]>
      5 /conditions/geometry/mean… http…       1 float64   blosc      <int> <int [2]>
      6 /conditions/geometry/sun_… http…       1 float64   blosc      <int> <int [3]>
-     7 /conditions/geometry/view… http…       2 float64   blosc      <int> <int [5]>
+     7 /conditions/geometry/view… http…       4 float64   blosc      <int> <int [5]>
      8 /conditions/geometry/x     http…       1 int64     blosc      <int> <int [1]>
      9 /conditions/geometry/y     http…       1 int64     blosc      <int> <int [1]>
     10 /conditions/mask/detector… http…      36 uint8     blosc      <int> <int [2]>
@@ -182,48 +182,54 @@ contains, the type of data, as well as its dimensions and chunking
 structure.
 
 We can also look at overviews of individual arrays. First, let’s narrow
-down to measurements taken at 10m resolution:
+down to measurements taken at 20-metre resolution:
 
 ``` r
-r10m <- zarr_store %>%
-  filter(str_starts(array, "/measurements/reflectance/r10m/"))
+r20m <- zarr_store %>%
+  filter(str_starts(array, "/measurements/reflectance/r20m/"))
 
-r10m
+r20m
 ```
 
-    # A tibble: 6 × 7
-      array                       path  nchunks data_type compressor dim   chunk_dim
-      <chr>                       <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-    1 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
-    2 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
-    3 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
-    4 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
-    5 /measurements/reflectance/… http…       1 int64     blosc      <int> <int [1]>
-    6 /measurements/reflectance/… http…       1 int64     blosc      <int> <int [1]>
+    # A tibble: 12 × 7
+       array                      path  nchunks data_type compressor dim   chunk_dim
+       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
+     1 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     2 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     3 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     4 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     5 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     6 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     7 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     8 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     9 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+    10 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+    11 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
+    12 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
 
 Then, we select the B02 array and examine its dimensions and chuning:
 
 ``` r
-r10m %>%
+r20m %>%
   filter(str_ends(array, "b02")) %>%
   select(path, nchunks, dim, chunk_dim) %>%
   as.list()
 ```
 
     $path
-    [1] "https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr/measurements/reflectance/r10m/b02"
+    [1] "https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/b02"
 
     $nchunks
     [1] 36
 
     $dim
     $dim[[1]]
-    [1] 10980 10980
+    [1] 5490 5490
 
 
     $chunk_dim
     $chunk_dim[[1]]
-    [1] 1830 1830
+    [1] 915 915
 
 We can also see an overview of individual arrays using
 `zarr_overview()`. With the default setting (where `as_data_frame` is
@@ -231,29 +237,29 @@ We can also see an overview of individual arrays using
 in a more digestible way:
 
 ``` r
-r10m_b02 <- r10m %>%
+r20m_b02 <- r20m %>%
   filter(str_ends(array, "b02")) %>%
   pull(path)
 
-r10m_b02 %>%
+r20m_b02 %>%
   zarr_overview()
 ```
 
     Type: Array
-    Path: https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr/measurements/reflectance/r10m/b02/
-    Shape: 10980 x 10980
-    Chunk Shape: 1830 x 1830
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/b02/
+    Shape: 5490 x 5490
+    Chunk Shape: 915 x 915
     No. of Chunks: 36 (6 x 6)
     Data Type: uint16
     Endianness: little
     Compressor: blosc
 
 The above overview tells us that the data is two-dimensional, with
-dimensions 10980 x 10980. Zarr data is split up into *chunks*, which are
+dimensions 5490 x 5490 Zarr data is split up into *chunks*, which are
 smaller, independent piece of the larger array. Chunks can be accessed
 individually, without loading the entire array. In this case, there are
 36 chunks in total, with 6 along each of the dimensions, each of size
-1830 x 1830.
+915 x 915.
 
 # Read Zarr data
 
@@ -264,36 +270,36 @@ of the dimensions as rows and columns of the data. For example, to
 select the first 10 rows and the first 5 columns:
 
 ``` r
-r10m_b02 %>%
+r20m_b02 %>%
   read_zarr_array(list(1:10, 1:5))
 ```
 
           [,1] [,2] [,3] [,4] [,5]
-     [1,]    0    0    0    0    0
-     [2,]    0    0    0    0    0
-     [3,]    0    0    0    0    0
-     [4,]    0    0    0    0    0
-     [5,]    0    0    0    0    0
-     [6,]    0    0    0    0    0
-     [7,]    0    0    0    0    0
-     [8,]    0    0    0    0    0
-     [9,]    0    0    0    0    0
-    [10,]    0    0    0    0    0
+     [1,] 1156 1134 1142 1137 1141
+     [2,] 1210 1178 1246 1165 1143
+     [3,] 1134 1167 1195 1164 1139
+     [4,] 1158 1136 1133 1130 1128
+     [5,] 1141 1131 1127 1153 1143
+     [6,] 1167 1141 1143 1141 1187
+     [7,] 1173 1140 1126 1131 1267
+     [8,] 1146 1141 1129 1187 1321
+     [9,] 1138 1151 1149 1312 1340
+    [10,] 1152 1157 1227 1393 1340
 
-Or, to select rows rows 8425 to 8430 and columns 1 to 5:
+Or, to select rows rows 4215 to 4220 and columns 1 to 5:
 
 ``` r
-r10m_b02 %>%
-  read_zarr_array(list(8425:8430, 1:5))
+r20m_b02 %>%
+  read_zarr_array(list(4215:4220, 1:5))
 ```
 
          [,1] [,2] [,3] [,4] [,5]
-    [1,] 9512 9456 9424 9360 9296
-    [2,] 9488 9456 9352 9296 9216
-    [3,] 9440 9392 9264 9216 9136
-    [4,] 9400 9328 9328 9304 9160
-    [5,] 9432 9376 9368 9272 9240
-    [6,] 9440 9400 9336 9336 9352
+    [1,] 8766 9702 8874 8296 8279
+    [2,] 8398 9654 9225 8396 7949
+    [3,] 7825 8083 8741 8653 7528
+    [4,] 4534 2968 5217 8685 7193
+    [5,] 1810 2078 3950 6415 6422
+    [6,] 6773 3676 2430 2563 4955
 
 ## Coordinates
 
@@ -309,41 +315,41 @@ UTM zone’s origin.
 item[["properties"]][["proj:code"]]
 ```
 
-    [1] "EPSG:32626"
+    [1] "EPSG:32632"
 
 We can see that `x` and `y` are one dimensional:
 
 ``` r
-r10m_x <- r10m %>%
+r20m_x <- r20m %>%
   filter(str_ends(array, "x")) %>%
   pull(path)
 
-r10m_x %>%
+r20m_x %>%
   zarr_overview()
 ```
 
     Type: Array
-    Path: https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr/measurements/reflectance/r10m/x/
-    Shape: 10980
-    Chunk Shape: 10980
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/x/
+    Shape: 5490
+    Chunk Shape: 5490
     No. of Chunks: 1 (1)
     Data Type: int64
     Endianness: little
     Compressor: blosc
 
 ``` r
-r10m_y <- r10m %>%
+r20m_y <- r20m %>%
   filter(str_ends(array, "y")) %>%
   pull(path)
 
-r10m_y %>%
+r20m_y %>%
   zarr_overview()
 ```
 
     Type: Array
-    Path: https://objectstore.eodc.eu:2222/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/22/products/cpm_v256/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252.zarr/measurements/reflectance/r10m/y/
-    Shape: 10980
-    Chunk Shape: 10980
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/y/
+    Shape: 5490
+    Chunk Shape: 5490
     No. of Chunks: 1 (1)
     Data Type: int64
     Endianness: little
@@ -358,31 +364,31 @@ describing which elements we want to extract. Since there is only one
 dimension, we only need to supply one entry in the indexing list:
 
 ``` r
-r10m_x %>%
+r20m_x %>%
   read_zarr_array(list(1:5))
 ```
 
-    [1] 399965 399975 399985 399995 400005
+    [1] 600010 600030 600050 600070 600090
 
 Or, we can read in the whole array and view its first few values with
 `head()`. Of course, reading in the whole array, rather than a small
 section of it, will take longer.
 
 ``` r
-r10m_x %>%
+r20m_x %>%
   read_zarr_array() %>%
   head(5)
 ```
 
-    [1] 399965 399975 399985 399995 400005
+    [1] 600010 600030 600050 600070 600090
 
 ``` r
-r10m_y %>%
+r20m_y %>%
   read_zarr_array() %>%
   head(5)
 ```
 
-    [1] 4600015 4600005 4599995 4599985 4599975
+    [1] 5300030 5300010 5299990 5299970 5299950
 
 ## Different resolutions
 
@@ -406,18 +412,18 @@ b02
 
 The resolution affects the dimensions of the data; when measurements are
 taken at a higher resolution, there will be more data. We can see here
-that there is less data for the 20m resolution than the 10m resolution
-(recall, its dimensions are 10980 x 10980), and even less for the 60m
+that there is more data for the 10m resolution than the 20m resolution
+(recall, its dimensions are 5490 x 5490), and less for the 60m
 resolution:
 
 ``` r
 b02 %>%
-  filter(array == "/measurements/reflectance/r20m/b02") %>%
+  filter(array == "/measurements/reflectance/r10m/b02") %>%
   pull(dim)
 ```
 
     [[1]]
-    [1] 5490 5490
+    [1] 10980 10980
 
 ``` r
 b02 %>%
@@ -432,14 +438,9 @@ b02 %>%
 
 The following sections show examples from each of the Sentinel missions.
 
-## Sentinel 2
-
-Since we have already been looking at Sentinel 2 data above, we will
-first continue with this example.
-
 ## Sentinel 1
 
-The second example looks at [Sentinel 1 Level 2 Ocean (OCN)
+The first example looks at [Sentinel 1 Level 2 Ocean (OCN)
 data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn),
 which consists of data for oceanographic study, such as monitoring sea
 surface conditions, detecting oil spills, and studying ocean currents.
@@ -705,11 +706,92 @@ owi_stars
 Finally, we can plot this object:
 
 ``` r
-plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", border = NA)
+plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/owi-plot-1.png)
 
 ## Sentinel 2
+
+We will calculate the Normalized Difference Vegetation Index (NVDI) for
+data from the Sentinel-2 mission. This requires both the red (B04) and
+near-infrared (B08) bands. We will work with these at 20-metre
+resolution.
+
+Recall that we already have an object `r20m` which contains the arrays
+at 20-metre resolution:
+
+``` r
+r20m
+```
+
+    # A tibble: 12 × 7
+       array                      path  nchunks data_type compressor dim   chunk_dim
+       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
+     1 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     2 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     3 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     4 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     5 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     6 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     7 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     8 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+     9 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+    10 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
+    11 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
+    12 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
+
+We will read in the `B04` and `B08` bands, as well as the `x` and `y`
+coordinates, using the `map()` function to read them all in, and store
+them in a list.
+
+``` r
+r20m_arrays <- r20m %>%
+  mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) %>%
+  filter(array %in% c("b04", "b08", "x", "y")) %>%
+  split(.$array) %>%
+  map(\(x) {
+    read_zarr_array(x[["path"]])
+  })
+```
+
+``` r
+tci_product <- zarr_store %>%
+  filter(array == "/quality/l2a_quicklook/r20m/tci") %>%
+  pull(path)
+
+tci_product %>%
+  zarr_overview()
+```
+
+    Type: Array
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/quality/l2a_quicklook/r20m/tci/
+    Shape: 3 x 5490 x 5490
+    Chunk Shape: 1 x 915 x 915
+    No. of Chunks: 108 (3 x 6 x 6)
+    Data Type: uint8
+    Endianness: NA
+    Compressor: blosc
+
+``` r
+# Lots of thoughts etc here... but for now....
+tci <- tci_product %>%
+  read_zarr_array(list(NULL, 1:5, 1:5))
+
+# Reading in part of the array, we see it's not in the right format, e.g. we want [,,1] [,,2] and [,,3], so # of bands along the third dimension is 3 bc it's RGB, so need to reshape
+
+tci <- tci_product %>%
+  read_zarr_array()
+
+tci %>% 
+  aperm(c(2,3,1)) %>% # reformat
+  st_as_stars() %>% # make into stars object
+  st_rgb() %>% # Treat channels as RGB
+  plot()
+```
+
+    downsample set to 11
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/rgb-quicklook-1.png)
 
 ## Sentinel 3

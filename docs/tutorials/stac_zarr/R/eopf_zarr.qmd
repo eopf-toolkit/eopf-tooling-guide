@@ -110,7 +110,7 @@ For the first part of this tutorial, we will be using data from the [Sentinel-2 
 ```{r access-stac-product}
 item <- stac("https://stac.core.eopf.eodc.eu/") %>%
   collections(collection_id = "sentinel-2-l2a") %>%
-  items(feature_id = "S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252") %>%
+  items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") %>%
   get_request()
 
 product <- item %>%
@@ -140,19 +140,19 @@ zarr_store
 
 This shows us the path to access the Zarr array, the number of chunks it contains, the type of data, as well as its dimensions and chunking structure.
 
-We can also look at overviews of individual arrays. First, let's narrow down to measurements taken at 10m resolution:
+We can also look at overviews of individual arrays. First, let's narrow down to measurements taken at 20-metre resolution:
 
-```{r measurements-10m}
-r10m <- zarr_store %>%
-  filter(str_starts(array, "/measurements/reflectance/r10m/"))
+```{r measurements-20m}
+r20m <- zarr_store %>%
+  filter(str_starts(array, "/measurements/reflectance/r20m/"))
 
-r10m
+r20m
 ```
 
 Then, we select the B02 array and examine its dimensions and chuning:
 
 ```{r array-info}
-r10m %>%
+r20m %>%
   filter(str_ends(array, "b02")) %>%
   select(path, nchunks, dim, chunk_dim) %>%
   as.list()
@@ -162,30 +162,30 @@ r10m %>%
 We can also see an overview of individual arrays using `zarr_overview()`. With the default setting (where `as_data_frame` is `FALSE`), this prints information on the array directly to the console, in a more digestible way:
 
 ```{r array-overview}
-r10m_b02 <- r10m %>%
+r20m_b02 <- r20m %>%
   filter(str_ends(array, "b02")) %>%
   pull(path)
 
-r10m_b02 %>%
+r20m_b02 %>%
   zarr_overview()
 ```
 
-The above overview tells us that the data is two-dimensional, with dimensions 10980 x 10980. Zarr data is split up into _chunks_, which are smaller, independent piece of the larger array. Chunks can be accessed individually, without loading the entire array. In this case, there are 36 chunks in total, with 6 along each of the dimensions, each of size 1830 x 1830.
+The above overview tells us that the data is two-dimensional, with dimensions 5490 x 5490 Zarr data is split up into _chunks_, which are smaller, independent piece of the larger array. Chunks can be accessed individually, without loading the entire array. In this case, there are 36 chunks in total, with 6 along each of the dimensions, each of size 915 x 915.
 
 # Read Zarr data
 
 To read in Zarr data, we use `read_zarr_array()`, and can pass a list to the `index` argument, describing which elements we want to extract, along each dimension. Since this array is two-dimensional, we can think of the dimensions as rows and columns of the data. For example, to select the first 10 rows and the first 5 columns:
 
 ```{r read-array-index}
-r10m_b02 %>%
+r20m_b02 %>%
   read_zarr_array(list(1:10, 1:5))
 ```
 
-Or, to select rows rows 8425 to 8430 and columns 1 to 5:
+Or, to select rows rows 4215 to 4220 and columns 1 to 5:
 
 ```{r read-array-index-2}
-r10m_b02 %>%
-  read_zarr_array(list(8425:8430, 1:5))
+r20m_b02 %>%
+  read_zarr_array(list(4215:4220, 1:5))
 ```
 
 ## Coordinates
@@ -199,18 +199,18 @@ item[["properties"]][["proj:code"]]
 We can see that `x` and `y` are one dimensional:
 
 ```{r x-y-dims}
-r10m_x <- r10m %>%
+r20m_x <- r20m %>%
   filter(str_ends(array, "x")) %>%
   pull(path)
 
-r10m_x %>%
+r20m_x %>%
   zarr_overview()
 
-r10m_y <- r10m %>%
+r20m_y <- r20m %>%
   filter(str_ends(array, "y")) %>%
   pull(path)
 
-r10m_y %>%
+r20m_y %>%
   zarr_overview()
 ```
 
@@ -219,18 +219,18 @@ Which means that, when combined, they form a grid that describes the location of
 The `x` and `y` dimensions can be read in using the same logic: by describing which elements we want to extract. Since there is only one dimension, we only need to supply one entry in the indexing list:
 
 ```{r x-read-index}
-r10m_x %>%
+r20m_x %>%
   read_zarr_array(list(1:5))
 ```
 
 Or, we can read in the whole array and view its first few values with `head()`. Of course, reading in the whole array, rather than a small section of it, will take longer.
 
 ```{r x-y-read-head}
-r10m_x %>%
+r20m_x %>%
   read_zarr_array() %>%
   head(5)
 
-r10m_y %>%
+r20m_y %>%
   read_zarr_array() %>%
   head(5)
 ```
@@ -246,11 +246,11 @@ b02 <- zarr_store %>%
 b02
 ```
 
-The resolution affects the dimensions of the data; when measurements are taken at a higher resolution, there will be more data. We can see here that there is less data for the 20m resolution than the 10m resolution (recall, its dimensions are 10980 x 10980), and even less for the 60m resolution:
+The resolution affects the dimensions of the data; when measurements are taken at a higher resolution, there will be more data. We can see here that there is more data for the 10m resolution than the 20m resolution (recall, its dimensions are 5490 x 5490), and less for the 60m resolution:
 
 ```{r b02-resolutions-dims}
 b02 %>%
-  filter(array == "/measurements/reflectance/r20m/b02") %>%
+  filter(array == "/measurements/reflectance/r10m/b02") %>%
   pull(dim)
 
 b02 %>%
@@ -262,13 +262,9 @@ b02 %>%
 
 The following sections show examples from each of the Sentinel missions.
 
-## Sentinel 2
-
-Since we have already been looking at Sentinel 2 data above, we will first continue with this example.
-
 ## Sentinel 1
 
-The second example looks at [Sentinel 1 Level 2 Ocean (OCN) data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn), which consists of data for oceanographic study, such as monitoring sea surface conditions, detecting oil spills, and studying ocean currents. This example will show how to access and plot Wind Direction data.
+The first example looks at [Sentinel 1 Level 2 Ocean (OCN) data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn), which consists of data for oceanographic study, such as monitoring sea surface conditions, detecting oil spills, and studying ocean currents. This example will show how to access and plot Wind Direction data.
 
 First, select the relevant collection and item from STAC:
 
@@ -280,6 +276,7 @@ l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") %>%
 
 l2_ocn
 ```
+
 We can look at each of the assets' to understand what the item contains:
 
 ```{r l2-ocn-assets}
@@ -319,6 +316,7 @@ owi <- l2_ocn_store %>%
 
 owi
 ```
+
 We are interested in `wind_direction`, as well as the coordinate arrays (`latitude` and `longitude`). We can get an overview of the arrays' dimensions and structures:
 
 ```{r owi-overview}
@@ -382,9 +380,54 @@ owi_stars
 Finally, we can plot this object:
 
 ```{r owi-plot}
-plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", border = NA)
+plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
 
 ## Sentinel 2
+
+We will calculate the Normalized Difference Vegetation Index (NVDI) for data from the Sentinel-2 mission. This requires both the red (B04) and near-infrared (B08) bands. We will work with these at 20-metre resolution.
+
+Recall that we already have an object `r20m` which contains the arrays at 20-metre resolution:
+
+```{r r20m-print}
+r20m
+```
+
+We will read in the `B04` and `B08` bands, as well as the `x` and `y` coordinates, using the `map()` function to read them all in, and store them in a list.
+
+```{r r20m-arrays-ex}
+r20m_arrays <- r20m %>%
+  mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) %>%
+  filter(array %in% c("b04", "b08", "x", "y")) %>%
+  split(.$array) %>%
+  map(\(x) {
+    read_zarr_array(x[["path"]])
+  })
+```
+
+```{r rgb-quicklook}
+tci_product <- zarr_store %>%
+  filter(array == "/quality/l2a_quicklook/r20m/tci") %>%
+  pull(path)
+
+tci_product %>%
+  zarr_overview()
+
+# Lots of thoughts etc here... but for now....
+tci <- tci_product %>%
+  read_zarr_array(list(NULL, 1:5, 1:5))
+
+# Reading in part of the array, we see it's not in the right format, e.g. we want [,,1] [,,2] and [,,3], so # of bands along the third dimension is 3 bc it's RGB, so need to reshape
+
+tci <- tci_product %>%
+  read_zarr_array()
+
+tci %>% 
+  aperm(c(2,3,1)) %>% # reformat
+  st_as_stars() %>% # make into stars object
+  st_rgb() %>% # Treat channels as RGB
+  plot()
+```
+
 
 ## Sentinel 3
