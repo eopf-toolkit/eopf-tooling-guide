@@ -37,6 +37,8 @@ We will use the `rstac` package (for accessing the STAC catalog), the
 (for working with spatiotemporal data) in this tutorial. You can install
 them directly from CRAN:
 
+(TODO add terra)
+
 ``` r
 install.packages("rstac")
 install.packages("tidyverse")
@@ -63,6 +65,7 @@ library(rstac)
 library(tidyverse)
 library(Rarr)
 library(stars)
+library(terra)
 ```
 
 ## Fixes to the `Rarr` package
@@ -748,12 +751,45 @@ them in a list.
 ``` r
 r20m_arrays <- r20m %>%
   mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) %>%
-  filter(array %in% c("b04", "b08", "x", "y")) %>%
+  filter(array %in% c("b04", "x", "y")) %>%
   split(.$array) %>%
   map(\(x) {
-    read_zarr_array(x[["path"]])
+    if (x[["array"]] == "b04") {
+    read_zarr_array(x[["path"]], list(1:50, 1:50))
+    } else {
+    read_zarr_array(x[["path"]], list(1:50))
+    }
   })
 ```
+
+b08 is only available at 10m, so get that, then aggregate it up to 20m
+
+``` r
+r10m_b08 <- zarr_store %>% 
+  filter(array == "/measurements/reflectance/r10m/b08") %>% 
+  pull(path) %>%
+  read_zarr_array(list(1:100, 1:100))
+```
+
+``` r
+r10m_b08 <- rast(r10m_b08)
+
+r20m_b08 <- aggregate(r10m_b08, fact = 2)
+```
+
+``` r
+st_as_stars(b04 = r20m_arrays[["b04"]], b08 = as.array(r20m_b08)[,,1])
+```
+
+    stars object with 2 dimensions and 2 attributes
+    attribute(s):
+           Min.  1st Qu. Median     Mean  3rd Qu. Max.
+    b04  1101.0 1231.000 1291.0 1356.038 1421.000 3125
+    b08  1936.5 3987.938 5036.5 4753.588 5498.312 8149
+    dimension(s):
+       from to offset delta point x/y
+    X1    1 50      0     1 FALSE [x]
+    X2    1 50      0     1 FALSE [y]
 
 ``` r
 tci_product <- zarr_store %>%

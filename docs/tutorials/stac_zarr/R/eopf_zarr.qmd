@@ -32,6 +32,8 @@ An R environment is required to follow this tutorial, with R version >= 4.1.0. W
 
 We will use the `rstac` package (for accessing the STAC catalog), the `tidyverse` package (for data manipulation), and the `stars` package (for working with spatiotemporal data) in this tutorial. You can install them directly from CRAN:
 
+(TODO add terra)
+
 ```{r install-rstac}
 #| eval: false
 install.packages("rstac")
@@ -61,6 +63,7 @@ library(rstac)
 library(tidyverse)
 library(Rarr)
 library(stars)
+library(terra)
 ```
 
 ## Fixes to the `Rarr` package
@@ -398,11 +401,34 @@ We will read in the `B04` and `B08` bands, as well as the `x` and `y` coordinate
 ```{r r20m-arrays-ex}
 r20m_arrays <- r20m %>%
   mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) %>%
-  filter(array %in% c("b04", "b08", "x", "y")) %>%
+  filter(array %in% c("b04", "x", "y")) %>%
   split(.$array) %>%
   map(\(x) {
-    read_zarr_array(x[["path"]])
+    if (x[["array"]] == "b04") {
+    read_zarr_array(x[["path"]], list(1:50, 1:50))
+    } else {
+    read_zarr_array(x[["path"]], list(1:50))
+    }
   })
+```
+
+b08 is only available at 10m, so get that, then aggregate it up to 20m
+
+```{r r10m-b08}
+r10m_b08 <- zarr_store %>% 
+  filter(array == "/measurements/reflectance/r10m/b08") %>% 
+  pull(path) %>%
+  read_zarr_array(list(1:100, 1:100))
+```
+
+```{r terra-agg}
+r10m_b08 <- rast(r10m_b08)
+
+r20m_b08 <- aggregate(r10m_b08, fact = 2)
+```
+
+```{r nvdi-obj}
+st_as_stars(b04 = r20m_arrays[["b04"]], b08 = as.array(r20m_b08)[,,1])
 ```
 
 ```{r rgb-quicklook}
@@ -428,6 +454,5 @@ tci %>%
   st_rgb() %>% # Treat channels as RGB
   plot()
 ```
-
 
 ## Sentinel 3
