@@ -32,13 +32,15 @@ for a self-contained coding environment.
 
 ## Dependencies
 
-We will use the `rstac` package (for accessing the STAC catalog) and the
-`tidyverse` package (for data manipulation) in this tutorial. You can
-install them directly from CRAN:
+We will use the `rstac` package (for accessing the STAC catalog), the
+`tidyverse` package (for data manipulation), and the `stars` package
+(for working with spatiotemporal data) in this tutorial. You can install
+them directly from CRAN:
 
 ``` r
 install.packages("rstac")
 install.packages("tidyverse")
+install.packages("stars")
 ```
 
 We will also use the `Rarr` package to read Zarr data. It must be
@@ -60,6 +62,7 @@ Finally, load the packages into your environment:
 library(rstac)
 library(tidyverse)
 library(Rarr)
+library(stars)
 ```
 
 ## Fixes to the `Rarr` package
@@ -141,13 +144,20 @@ product hierarchy. We can use `zarr_overview()` to get an overview of
 it, setting `as_data_frame` to `TRUE` so that we can see the entries in
 a data frame instead of printed directly to the console. Each entry is a
 Zarr array; we remove `product_url` from the path to get a better idea
-of what each array is.
+of what each array is. Since this is something we will want to do
+multiple times throughout the tutorial, we create a helper function for
+this.
 
 ``` r
-zarr_store <- product_url %>%
-  zarr_overview(as_data_frame = TRUE) %>%
+derive_store_array <- function(store, product_url) {
+  store %>%
   mutate(array = str_remove(path, product_url)) %>%
   relocate(array, .before = path)
+}
+
+zarr_store <- product_url %>%
+  zarr_overview(as_data_frame = TRUE) %>%
+  derive_store_array(product_url)
 
 zarr_store
 ```
@@ -418,53 +428,158 @@ b02 %>%
     [[1]]
     [1] 1830 1830
 
-# WIP —-
+# Examples
 
-Want to look at owi:
+The following sections show examples from each of the Sentinel missions.
+
+## Sentinel 2
+
+Since we have already been looking at Sentinel 2 data above, we will
+first continue with this example.
+
+## Sentinel 1
+
+The second example looks at [Sentinel 1 Level 2 Ocean (OCN)
+data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn),
+which consists of data for oceanographic study, such as monitoring sea
+surface conditions, detecting oil spills, and studying ocean currents.
+This example will show how to access and plot Wind Direction data.
+
+First, select the relevant collection and item from STAC:
 
 ``` r
-item <- stac("https://stac.core.eopf.eodc.eu/") %>%
+l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") %>%
   collections(collection_id = "sentinel-1-l2-ocn") %>%
   items(feature_id = "S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971") %>%
   get_request()
+
+l2_ocn
 ```
+
+    ###Item
+    - id: S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971
+    - collection: sentinel-1-l2-ocn
+    - bbox: xmin: -25.77445, ymin: 30.25712, xmax: -22.82115, ymax: 32.16941
+    - datetime: 2025-06-04T19:39:23.099186Z
+    - assets: osw, owi, rvl, product, product_metadata
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+We can look at each of the assets’ to understand what the item contains:
 
 ``` r
-owi_asset <- item$assets$owi
-
-owi_asset[["title"]]
+l2_ocn %>%
+  pluck("assets") %>%
+  map("title")
 ```
 
+    $osw
+    [1] "Ocean Swell spectra"
+
+    $owi
     [1] "Ocean Wind field"
 
+    $rvl
+    [1] "Surface Radial Velocity"
+
+    $product
+    [1] "EOPF Product"
+
+    $product_metadata
+    [1] "Consolidated Metadata"
+
+We are interested in the “Ocean Wind field” data, and will hold onto the
+“owi” key for now.
+
+To access all of the `owi` data, we get the `"product"` asset and then
+the full Zarr store, again using our helper function to extract array
+information from the full array path:
+
 ``` r
-zarr_store <- item %>%
+l2_ocn_url <- l2_ocn %>%
   assets_select(asset_names = "product") %>%
-  assets_url() %>%
-  zarr_overview(as_data_frame = TRUE)
-  
-owi <- zarr_store %>%
-  filter(str_starts(path, owi_asset$href)) %>%
-  mutate(
-    variable = str_remove(path, owi_asset$href),
-    variable = str_remove(variable, "/")
-  ) %>%
-  relocate(variable, .before = path)
+  assets_url() 
+
+l2_ocn_store <- l2_ocn_url %>%
+  zarr_overview(as_data_frame = TRUE) %>%
+  derive_store_array(l2_ocn_url)
+
+l2_ocn_store
+```
+
+    # A tibble: 114 × 7
+       array                      path  nchunks data_type compressor dim   chunk_dim
+       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
+     1 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [3]>
+     2 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
+     3 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
+     4 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
+     5 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
+     6 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
+     7 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [5]>
+     8 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [5]>
+     9 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [3]>
+    10 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [3]>
+    # ℹ 104 more rows
+
+Next, we filter to access `owi` measurement data only:
+
+``` r
+l2_ocn_store %>%
+  filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
+```
+
+    # A tibble: 4 × 7
+      array                       path  nchunks data_type compressor dim   chunk_dim
+      <chr>                       <chr>   <dbl> <chr>     <chr>      <lis> <list>   
+    1 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
+    2 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
+    3 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
+    4 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
+
+Since all of these arrays start with
+`/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/`,
+we can remove that to get a clearer idea of what each array is:
+
+``` r
+owi <- l2_ocn_store %>%
+  filter(str_starts(array, "/owi"), str_detect(array, "measurements")) %>%
+  mutate(array = str_remove(array, "/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/"))
 
 owi
 ```
 
     # A tibble: 4 × 7
-      variable       path               nchunks data_type compressor dim   chunk_dim
+      array          path               nchunks data_type compressor dim   chunk_dim
       <chr>          <chr>                <dbl> <chr>     <chr>      <lis> <list>   
     1 latitude       https://objects.e…       1 float32   blosc      <int> <int [2]>
     2 longitude      https://objects.e…       1 float32   blosc      <int> <int [2]>
     3 wind_direction https://objects.e…       1 float32   blosc      <int> <int [2]>
     4 wind_speed     https://objects.e…       1 float32   blosc      <int> <int [2]>
 
+We are interested in `wind_direction`, as well as the coordinate arrays
+(`latitude` and `longitude`). We can get an overview of the arrays’
+dimensions and structures:
+
 ``` r
 owi %>%
-  filter(variable == "latitude") %>%
+  filter(array == "wind_direction") %>%
+  pull(path) %>%
+  zarr_overview()
+```
+
+    Type: Array
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s01siwocn/04/products/cpm_v256/S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971.zarr/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/wind_direction/
+    Shape: 167 x 255
+    Chunk Shape: 167 x 255
+    No. of Chunks: 1 (1 x 1)
+    Data Type: float32
+    Endianness: little
+    Compressor: blosc
+
+``` r
+owi %>%
+  filter(array == "latitude") %>%
   pull(path) %>%
   zarr_overview()
 ```
@@ -480,7 +595,7 @@ owi %>%
 
 ``` r
 owi %>%
-  filter(variable == "longitude") %>%
+  filter(array == "longitude") %>%
   pull(path) %>%
   zarr_overview()
 ```
@@ -494,12 +609,30 @@ owi %>%
     Endianness: little
     Compressor: blosc
 
-Reading data in. These are small and only have one chunk, we can read
-them in quickly:
+Here, we can see that all of the arrays are of the same shape: 167 x
+255, with only one chunk. Since these are small, we can read all of the
+data in at once. This is done by *not* supplying any additional
+arguments to `read_zarr_array()`:
+
+``` r
+owi_wind_direction <- owi %>%
+  filter(array == "wind_direction") %>%
+  pull(path) %>%
+  read_zarr_array()
+
+owi_wind_direction[1:5, 1:5]
+```
+
+             [,1]     [,2]     [,3]     [,4]     [,5]
+    [1,] 87.10201 85.10722 80.11242 87.11762 80.12283
+    [2,] 87.10078 87.10600 88.11120 83.11641 86.12161
+    [3,] 89.09956 81.10477 82.10999 88.11519 88.12040
+    [4,] 87.09834 83.10355 84.10876 82.11398 81.11919
+    [5,] 83.09712 88.10233 83.10755 86.11276 85.11797
 
 ``` r
 owi_lat <- owi %>%
-  filter(variable == "latitude") %>%
+  filter(array == "latitude") %>%
   pull(path) %>%
   read_zarr_array()
 
@@ -515,7 +648,7 @@ owi_lat[1:5, 1:5]
 
 ``` r
 owi_long <- owi %>%
-  filter(variable == "longitude") %>%
+  filter(array == "longitude") %>%
   pull(path) %>%
   read_zarr_array()
 
@@ -529,39 +662,54 @@ owi_lat[1:5, 1:5]
     [4,] 30.28940 30.29110 30.29280 30.29450 30.29620
     [5,] 30.29842 30.30012 30.30182 30.30351 30.30521
 
-``` r
-owi_wind_direction <- owi %>%
-  filter(variable == "wind_direction") %>%
-  pull(path) %>%
-  read_zarr_array()
+Note that, unlike in the previous example with `x` and `y` coordinates
+that we explored, both `longitude` and `latitude` are 2-dimensional
+arrays, and they are not evenly spaced. Rather, the data grid is
+**curvilinear** — it has grid lines that are not straight, and there is
+a longitude and latitude for every pixel of the other layers (i.e.,
+`wind_direction`). This format is very common in satellite data.
 
-owi_wind_direction[1:5, 1:5]
-```
-
-             [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 87.10201 85.10722 80.11242 87.11762 80.12283
-    [2,] 87.10078 87.10600 88.11120 83.11641 86.12161
-    [3,] 89.09956 81.10477 82.10999 88.11519 88.12040
-    [4,] 87.09834 83.10355 84.10876 82.11398 81.11919
-    [5,] 83.09712 88.10233 83.10755 86.11276 85.11797
-
-Visualisation with stars, first convert to curvilinear grid, common in
+We use functions from the [`stars`
+package](https://r-spatial.github.io/stars/), loaded earlier, to format
+the data for visualisation. `stars` is specifically designed for
+reading, manipulating, and plotting spatiotemporal data, such as
 satellite data.
 
+The function `st_as_stars()` is used to get our data into the correct
+format for visualisation:
+
 ``` r
-library(stars)
-
-# Assume:
-# - owi_dir: matrix of wind direction (167 × 255)
-# - owi_long: matrix of longitude (167 × 255)
-# - owi_lat: matrix of latitude (167 × 255)
-
-# Step 1: Create stars object with wind data
-s <- st_as_stars(wind = owi_wind_direction)
-
-s <- st_as_stars(s, curvilinear = list(X1 = owi_long, X2 = owi_lat))
-
-plot(s, as_points = FALSE, axes = TRUE, breaks = "equal", border = NA)
+owi_stars <- st_as_stars(wind_direction = owi_wind_direction) %>%
+  st_as_stars(curvilinear = list(X1 = owi_long, X2 = owi_lat))
 ```
 
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/owi-vis-1.png)
+Getting the data into this format is also beneficial because it allows
+for a quick summary of the data and its attributes, providing
+information such as the median and mean `wind_direction`, the number of
+`NA`s, and information on the grid:
+
+``` r
+owi_stars
+```
+
+    stars object with 2 dimensions and 1 attribute
+    attribute(s):
+                        Min. 1st Qu.   Median     Mean  3rd Qu.     Max. NA's
+    wind_direction  33.29902 57.9872 66.76632 65.45217 73.04303 91.13456  430
+    dimension(s):
+       from  to         refsys point                      values x/y
+    X1    1 167 WGS 84 (CRS84) FALSE [167x255] -25.77,...,-22.83 [x]
+    X2    1 255 WGS 84 (CRS84) FALSE   [167x255] 30.26,...,32.16 [y]
+    curvilinear grid
+
+Finally, we can plot this object:
+
+``` r
+plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", border = NA)
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/owi-plot-1.png)
+
+## Sentinel 2
+
+## Sentinel 3

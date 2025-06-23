@@ -5,6 +5,8 @@ format:
     df-print: tibble
 execute:
   cache: true
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Table of Contents
@@ -28,12 +30,13 @@ An R environment is required to follow this tutorial, with R version >= 4.1.0. W
 
 ## Dependencies
 
-We will use the `rstac` package (for accessing the STAC catalog) and the `tidyverse` package (for data manipulation) in this tutorial. You can install them directly from CRAN:
+We will use the `rstac` package (for accessing the STAC catalog), the `tidyverse` package (for data manipulation), and the `stars` package (for working with spatiotemporal data) in this tutorial. You can install them directly from CRAN:
 
 ```{r install-rstac}
 #| eval: false
 install.packages("rstac")
 install.packages("tidyverse")
+install.packages("stars")
 ```
 
 We will also use the `Rarr` package to read Zarr data. It must be installed from Bioconductor, so first install the `BiocManager` package:
@@ -57,6 +60,7 @@ Finally, load the packages into your environment:
 library(rstac)
 library(tidyverse)
 library(Rarr)
+library(stars)
 ```
 
 ## Fixes to the `Rarr` package
@@ -118,13 +122,18 @@ product_url <- product %>%
 product_url
 ```
 
-The product is the "top level" Zarr asset, which contains the full Zarr product hierarchy. We can use `zarr_overview()` to get an overview of it, setting `as_data_frame` to `TRUE` so that we can see the entries in a data frame instead of printed directly to the console. Each entry is a Zarr array; we remove `product_url` from the path to get a better idea of what each array is.
+The product is the "top level" Zarr asset, which contains the full Zarr product hierarchy. We can use `zarr_overview()` to get an overview of it, setting `as_data_frame` to `TRUE` so that we can see the entries in a data frame instead of printed directly to the console. Each entry is a Zarr array; we remove `product_url` from the path to get a better idea of what each array is. Since this is something we will want to do multiple times throughout the tutorial, we create a helper function for this.
 
 ```{r overview}
-zarr_store <- product_url %>%
-  zarr_overview(as_data_frame = TRUE) %>%
+derive_store_array <- function(store, product_url) {
+  store %>%
   mutate(array = str_remove(path, product_url)) %>%
   relocate(array, .before = path)
+}
+
+zarr_store <- product_url %>%
+  zarr_overview(as_data_frame = TRUE) %>%
+  derive_store_array(product_url)
 
 zarr_store
 ```
@@ -251,96 +260,129 @@ b02 %>%
 
 # Examples
 
+The following sections show examples from each of the Sentinel missions.
+
+## Sentinel 2
+
+Since we have already been looking at Sentinel 2 data above, we will first continue with this example.
+
 ## Sentinel 1
 
-Want to look at owi:
+The second example looks at [Sentinel 1 Level 2 Ocean (OCN) data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn), which consists of data for oceanographic study, such as monitoring sea surface conditions, detecting oil spills, and studying ocean currents. This example will show how to access and plot Wind Direction data.
 
-```{r}
-item <- stac("https://stac.core.eopf.eodc.eu/") %>%
+First, select the relevant collection and item from STAC:
+
+```{r sentinel-1-stac}
+l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") %>%
   collections(collection_id = "sentinel-1-l2-ocn") %>%
   items(feature_id = "S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971") %>%
   get_request()
+
+l2_ocn
 ```
+We can look at each of the assets' to understand what the item contains:
 
-
-```{r}
-owi_asset <- item$assets$owi
-
-owi_asset[["title"]]
+```{r l2-ocn-assets}
+l2_ocn %>%
+  pluck("assets") %>%
+  map("title")
 ```
+We are interested in the "Ocean Wind field" data, and will hold onto the "owi" key for now.
 
-```{r}
-zarr_store <- item %>%
+To access all of the `owi` data, we get the `"product"` asset and then the full Zarr store, again using our helper function to extract array information from the full array path:
+
+```{r l2-ocn-store}
+l2_ocn_url <- l2_ocn %>%
   assets_select(asset_names = "product") %>%
-  assets_url() %>%
-  zarr_overview(as_data_frame = TRUE)
-  
-owi <- zarr_store %>%
-  filter(str_starts(path, owi_asset$href)) %>%
-  mutate(
-    variable = str_remove(path, owi_asset$href),
-    variable = str_remove(variable, "/")
-  ) %>%
-  relocate(variable, .before = path)
+  assets_url() 
+
+l2_ocn_store <- l2_ocn_url %>%
+  zarr_overview(as_data_frame = TRUE) %>%
+  derive_store_array(l2_ocn_url)
+
+l2_ocn_store
+```
+
+Next, we filter to access `owi` measurement data only:
+
+```{r owi-filter}
+l2_ocn_store %>%
+  filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
+```
+
+Since all of these arrays start with `/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/`, we can remove that to get a clearer idea of what each array is:
+
+```{r owi-arrays}
+owi <- l2_ocn_store %>%
+  filter(str_starts(array, "/owi"), str_detect(array, "measurements")) %>%
+  mutate(array = str_remove(array, "/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/"))
 
 owi
 ```
+We are interested in `wind_direction`, as well as the coordinate arrays (`latitude` and `longitude`). We can get an overview of the arrays' dimensions and structures:
 
-```{r}
+```{r owi-overview}
 owi %>%
-  filter(variable == "latitude") %>%
+  filter(array == "wind_direction") %>%
   pull(path) %>%
   zarr_overview()
 
 owi %>%
-  filter(variable == "longitude") %>%
+  filter(array == "latitude") %>%
+  pull(path) %>%
+  zarr_overview()
+
+owi %>%
+  filter(array == "longitude") %>%
   pull(path) %>%
   zarr_overview()
 ```
+Here, we can see that all of the arrays are of the same shape: 167 x 255, with only one chunk. Since these are small, we can read all of the data in at once. This is done by _not_ supplying any additional arguments to `read_zarr_array()`:
 
-Reading data in. These are small and only have one chunk, we can read them in quickly:
+```{r owi-read}
+owi_wind_direction <- owi %>%
+  filter(array == "wind_direction") %>%
+  pull(path) %>%
+  read_zarr_array()
 
-```{r}
+owi_wind_direction[1:5, 1:5]
+
 owi_lat <- owi %>%
-  filter(variable == "latitude") %>%
+  filter(array == "latitude") %>%
   pull(path) %>%
   read_zarr_array()
 
 owi_lat[1:5, 1:5]
 
 owi_long <- owi %>%
-  filter(variable == "longitude") %>%
+  filter(array == "longitude") %>%
   pull(path) %>%
   read_zarr_array()
 
 owi_lat[1:5, 1:5]
 ```
 
-```{r}
-owi_wind_direction <- owi %>%
-  filter(variable == "wind_direction") %>%
-  pull(path) %>%
-  read_zarr_array()
+Note that, unlike in the previous example with `x` and `y` coordinates that we explored, both `longitude` and `latitude` are 2-dimensional arrays, and they are not evenly spaced. Rather, the data grid is **curvilinear** --- it has grid lines that are not straight, and there is a longitude and latitude for every pixel of the other layers (i.e., `wind_direction`). This format is very common in satellite data.
 
-owi_wind_direction[1:5, 1:5]
+We use functions from the [`stars` package](https://r-spatial.github.io/stars/), loaded earlier, to format the data for visualisation. `stars` is specifically designed for reading, manipulating, and plotting spatiotemporal data, such as satellite data.
+
+The function `st_as_stars()` is used to get our data into the correct format for visualisation:
+
+```{r owi-format}
+owi_stars <- st_as_stars(wind_direction = owi_wind_direction) %>%
+  st_as_stars(curvilinear = list(X1 = owi_long, X2 = owi_lat))
 ```
 
-Visualisation with stars, first convert to curvilinear grid, common in satellite data.
+Getting the data into this format is also beneficial because it allows for a quick summary of the data and its attributes, providing information such as the median and mean `wind_direction`, the number of `NA`s, and information on the grid:
 
-```{r owi-vis}
-library(stars)
+```{r owi-format-show}
+owi_stars
+```
 
-# Assume:
-# - owi_dir: matrix of wind direction (167 × 255)
-# - owi_long: matrix of longitude (167 × 255)
-# - owi_lat: matrix of latitude (167 × 255)
+Finally, we can plot this object:
 
-# Step 1: Create stars object with wind data
-s <- st_as_stars(wind = owi_wind_direction)
-
-s <- st_as_stars(s, curvilinear = list(X1 = owi_long, X2 = owi_lat))
-
-plot(s, as_points = FALSE, axes = TRUE, breaks = "equal", border = NA)
+```{r owi-plot}
+plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", border = NA)
 ```
 
 ## Sentinel 2
