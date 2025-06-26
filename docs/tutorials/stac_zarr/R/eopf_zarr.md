@@ -133,15 +133,15 @@ We fetch the “product” asset under a given item, and can look at its
 URL:
 
 ``` r
-item <- stac("https://stac.core.eopf.eodc.eu/") %>%
-  collections(collection_id = "sentinel-2-l2a") %>%
-  items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") %>%
+item <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-2-l2a") |>
+  items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") |>
   get_request()
 
-product <- item %>%
+product <- item |>
   assets_select(asset_names = "product")
 
-product_url <- product %>%
+product_url <- product |>
   assets_url()
 
 product_url
@@ -160,13 +160,13 @@ this.
 
 ``` r
 derive_store_array <- function(store, product_url) {
-  store %>%
-    mutate(array = str_remove(path, product_url)) %>%
+  store |>
+    mutate(array = str_remove(path, product_url)) |>
     relocate(array, .before = path)
 }
 
-zarr_store <- product_url %>%
-  zarr_overview(as_data_frame = TRUE) %>%
+zarr_store <- product_url |>
+  zarr_overview(as_data_frame = TRUE) |>
   derive_store_array(product_url)
 
 zarr_store
@@ -195,7 +195,7 @@ We can also look at overviews of individual arrays. First, let’s narrow
 down to measurements taken at 20-metre resolution:
 
 ``` r
-r20m <- zarr_store %>%
+r20m <- zarr_store |>
   filter(str_starts(array, "/measurements/reflectance/r20m/"))
 
 r20m
@@ -220,9 +220,9 @@ r20m
 Then, we select the B02 array and examine its dimensions and chuning:
 
 ``` r
-r20m %>%
-  filter(str_ends(array, "b02")) %>%
-  select(path, nchunks, dim, chunk_dim) %>%
+r20m |>
+  filter(str_ends(array, "b02")) |>
+  select(path, nchunks, dim, chunk_dim) |>
   as.list()
 ```
 
@@ -247,11 +247,11 @@ We can also see an overview of individual arrays using
 in a more digestible way:
 
 ``` r
-r20m_b02 <- r20m %>%
-  filter(str_ends(array, "b02")) %>%
+r20m_b02 <- r20m |>
+  filter(str_ends(array, "b02")) |>
   pull(path)
 
-r20m_b02 %>%
+r20m_b02 |>
   zarr_overview()
 ```
 
@@ -280,7 +280,7 @@ of the dimensions as rows and columns of the data. For example, to
 select the first 10 rows and the first 5 columns:
 
 ``` r
-r20m_b02 %>%
+r20m_b02 |>
   read_zarr_array(list(1:10, 1:5))
 ```
 
@@ -299,7 +299,7 @@ r20m_b02 %>%
 Or, to select rows rows 4215 to 4220 and columns 1 to 5:
 
 ``` r
-r20m_b02 %>%
+r20m_b02 |>
   read_zarr_array(list(4215:4220, 1:5))
 ```
 
@@ -330,11 +330,11 @@ item[["properties"]][["proj:code"]]
 We can see that `x` and `y` are one dimensional:
 
 ``` r
-r20m_x <- r20m %>%
-  filter(str_ends(array, "x")) %>%
+r20m_x <- r20m |>
+  filter(str_ends(array, "x")) |>
   pull(path)
 
-r20m_x %>%
+r20m_x |>
   zarr_overview()
 ```
 
@@ -348,11 +348,11 @@ r20m_x %>%
     Compressor: blosc
 
 ``` r
-r20m_y <- r20m %>%
-  filter(str_ends(array, "y")) %>%
+r20m_y <- r20m |>
+  filter(str_ends(array, "y")) |>
   pull(path)
 
-r20m_y %>%
+r20m_y |>
   zarr_overview()
 ```
 
@@ -374,7 +374,7 @@ describing which elements we want to extract. Since there is only one
 dimension, we only need to supply one entry in the indexing list:
 
 ``` r
-r20m_x %>%
+r20m_x |>
   read_zarr_array(list(1:5))
 ```
 
@@ -385,16 +385,16 @@ Or, we can read in the whole array and view its first few values with
 section of it, will take longer.
 
 ``` r
-r20m_x %>%
-  read_zarr_array() %>%
+r20m_x |>
+  read_zarr_array() |>
   head(5)
 ```
 
     [1] 600010 600030 600050 600070 600090
 
 ``` r
-r20m_y %>%
-  read_zarr_array() %>%
+r20m_y |>
+  read_zarr_array() |>
   head(5)
 ```
 
@@ -407,7 +407,7 @@ For example, we can see that the B02 spectral band is available at 10m,
 20m, and 60m resolution:
 
 ``` r
-b02 <- zarr_store %>%
+b02 <- zarr_store |>
   filter(str_starts(array, "/measurements/reflectance"), str_ends(array, "b02"))
 
 b02
@@ -427,8 +427,8 @@ that there is more data for the 10m resolution than the 20m resolution
 resolution:
 
 ``` r
-b02 %>%
-  filter(array == "/measurements/reflectance/r10m/b02") %>%
+b02 |>
+  filter(array == "/measurements/reflectance/r10m/b02") |>
   pull(dim)
 ```
 
@@ -436,8 +436,8 @@ b02 %>%
     [1] 10980 10980
 
 ``` r
-b02 %>%
-  filter(array == "/measurements/reflectance/r60m/b02") %>%
+b02 |>
+  filter(array == "/measurements/reflectance/r60m/b02") |>
   pull(dim)
 ```
 
@@ -459,9 +459,9 @@ This example will show how to access and plot Wind Direction data.
 First, select the relevant collection and item from STAC:
 
 ``` r
-l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") %>%
-  collections(collection_id = "sentinel-1-l2-ocn") %>%
-  items(feature_id = "S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971") %>%
+l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-1-l2-ocn") |>
+  items(feature_id = "S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971") |>
   get_request()
 
 l2_ocn
@@ -479,8 +479,8 @@ l2_ocn
 We can look at each of the assets’ to understand what the item contains:
 
 ``` r
-l2_ocn %>%
-  pluck("assets") %>%
+l2_ocn |>
+  pluck("assets") |>
   map("title")
 ```
 
@@ -507,12 +507,12 @@ the full Zarr store, again using our helper function to extract array
 information from the full array path:
 
 ``` r
-l2_ocn_url <- l2_ocn %>%
-  assets_select(asset_names = "product") %>%
+l2_ocn_url <- l2_ocn |>
+  assets_select(asset_names = "product") |>
   assets_url()
 
-l2_ocn_store <- l2_ocn_url %>%
-  zarr_overview(as_data_frame = TRUE) %>%
+l2_ocn_store <- l2_ocn_url |>
+  zarr_overview(as_data_frame = TRUE) |>
   derive_store_array(l2_ocn_url)
 
 l2_ocn_store
@@ -536,7 +536,7 @@ l2_ocn_store
 Next, we filter to access `owi` measurement data only:
 
 ``` r
-l2_ocn_store %>%
+l2_ocn_store |>
   filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
 ```
 
@@ -553,8 +553,8 @@ Since all of these arrays start with
 we can remove that to get a clearer idea of what each array is:
 
 ``` r
-owi <- l2_ocn_store %>%
-  filter(str_starts(array, "/owi"), str_detect(array, "measurements")) %>%
+owi <- l2_ocn_store |>
+  filter(str_starts(array, "/owi"), str_detect(array, "measurements")) |>
   mutate(array = str_remove(array, "/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/"))
 
 owi
@@ -573,9 +573,9 @@ We are interested in `wind_direction`, as well as the coordinate arrays
 dimensions and structures:
 
 ``` r
-owi %>%
-  filter(array == "wind_direction") %>%
-  pull(path) %>%
+owi |>
+  filter(array == "wind_direction") |>
+  pull(path) |>
   zarr_overview()
 ```
 
@@ -589,9 +589,9 @@ owi %>%
     Compressor: blosc
 
 ``` r
-owi %>%
-  filter(array == "latitude") %>%
-  pull(path) %>%
+owi |>
+  filter(array == "latitude") |>
+  pull(path) |>
   zarr_overview()
 ```
 
@@ -605,9 +605,9 @@ owi %>%
     Compressor: blosc
 
 ``` r
-owi %>%
-  filter(array == "longitude") %>%
-  pull(path) %>%
+owi |>
+  filter(array == "longitude") |>
+  pull(path) |>
   zarr_overview()
 ```
 
@@ -626,9 +626,9 @@ data in at once. This is done by *not* supplying any additional
 arguments to `read_zarr_array()`:
 
 ``` r
-owi_wind_direction <- owi %>%
-  filter(array == "wind_direction") %>%
-  pull(path) %>%
+owi_wind_direction <- owi |>
+  filter(array == "wind_direction") |>
+  pull(path) |>
   read_zarr_array()
 
 owi_wind_direction[1:5, 1:5]
@@ -642,9 +642,9 @@ owi_wind_direction[1:5, 1:5]
     [5,] 83.09712 88.10233 83.10755 86.11276 85.11797
 
 ``` r
-owi_lat <- owi %>%
-  filter(array == "latitude") %>%
-  pull(path) %>%
+owi_lat <- owi |>
+  filter(array == "latitude") |>
+  pull(path) |>
   read_zarr_array()
 
 owi_lat[1:5, 1:5]
@@ -658,9 +658,9 @@ owi_lat[1:5, 1:5]
     [5,] 30.29842 30.30012 30.30182 30.30351 30.30521
 
 ``` r
-owi_long <- owi %>%
-  filter(array == "longitude") %>%
-  pull(path) %>%
+owi_long <- owi |>
+  filter(array == "longitude") |>
+  pull(path) |>
   read_zarr_array()
 
 owi_lat[1:5, 1:5]
@@ -690,7 +690,7 @@ The function `st_as_stars()` is used to get our data into the correct
 format for visualisation:
 
 ``` r
-owi_stars <- st_as_stars(wind_direction = owi_wind_direction) %>%
+owi_stars <- st_as_stars(wind_direction = owi_wind_direction) |>
   st_as_stars(curvilinear = list(X1 = owi_long, X2 = owi_lat))
 ```
 
@@ -758,10 +758,11 @@ using the `map()` function to read them all in, and store them in a
 list.
 
 ``` r
-r20m_arrays <- r20m %>%
-  mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) %>%
-  filter(array %in% c("b04", "x", "y")) %>%
-  split(.$array) %>%
+r20m_arrays <- r20m |>
+  mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) |>
+  filter(array %in% c("b04", "x", "y")) 
+
+r20m_arrays <- split(r20m_arrays, c("b04", "x", "y")) |>
   map(\(x) read_zarr_array(x[["path"]]))
 ```
 
@@ -769,9 +770,9 @@ The B08 band is only available at 10-metre resolution, so we read that
 in:
 
 ``` r
-r10m_b08 <- zarr_store %>%
-  filter(array == "/measurements/reflectance/r10m/b08") %>%
-  pull(path) %>%
+r10m_b08 <- zarr_store |>
+  filter(array == "/measurements/reflectance/r10m/b08") |>
+  pull(path) |>
   read_zarr_array()
 
 dim(r10m_b08)
@@ -784,14 +785,21 @@ resolution. This reduces the dimension of the B08 band to be 50 x 50,
 matching the other 20-metre resolution bands.
 
 ``` r
-r20m_b08 <- r10m_b08 %>%
-  rast() %>%
+r20m_b08 <- r10m_b08 |>
+  rast() |>
   aggregate(fact = 2)
+```
 
+
+    |---------|---------|---------|---------|
+    =========================================
+                                              
+
+``` r
 dim(r20m_b08)
 ```
 
-    [1] 50 50  1
+    [1] 5490 5490    1
 
 The B08 band is now in a format that considers the number of **layers**,
 which we do not need. We can convert it back to an array so that it is
@@ -811,29 +819,29 @@ and `y` as dimensions.
 ``` r
 ndvi_data <- st_as_stars(
   b04 = r20m_arrays[["b04"]], b08 = r20m_b08
-) %>%
-  st_set_dimensions("X1", r20m_arrays[["x"]], names = "x") %>%
+) |>
+  st_set_dimensions("X1", r20m_arrays[["x"]], names = "x") |>
   st_set_dimensions("X2", r20m_arrays[["y"]], names = "y")
 
 ndvi_data
 ```
 
     stars object with 2 dimensions and 2 attributes
-    attribute(s):
-           Min.  1st Qu. Median     Mean  3rd Qu. Max.
-    b04  1101.0 1231.000 1291.0 1356.038 1421.000 3125
-    b08  1936.5 3987.938 5036.5 4753.588 5498.312 8149
+    attribute(s), summary of first 1e+05 cells:
+           Min. 1st Qu.  Median     Mean 3rd Qu.  Max.
+    b04  1035.0  1309.0 1629.00 2296.687    2211 14363
+    b08   874.5  3689.5 4449.75 4653.465    5414 12868
     dimension(s):
-      from to  offset delta point x/y
-    x    1 50  600010    20 FALSE [x]
-    y    1 50 5300030   -20 FALSE [y]
+      from   to  offset delta point x/y
+    x    1 5490  600010    20 FALSE [x]
+    y    1 5490 5300030   -20 FALSE [y]
 
 This is a useful format that shows us summary statistics on each array.
 More than that, we can now use `tidyverse`-style data operations, such
 as `mutate()` to derive new variables:
 
 ``` r
-ndvi_data <- ndvi_data %>%
+ndvi_data <- ndvi_data |>
   mutate(
     sum_bands = b08 + b04,
     diff_bands = b08 - b04
@@ -844,7 +852,7 @@ Then, we can derive the `ndvi` (`diff_bands` / `sum_bands`), handling
 any cases where `sum_bands` is 0 by setting the NDVI to 0:
 
 ``` r
-ndvi_data <- ndvi_data %>%
+ndvi_data <- ndvi_data |>
   mutate(ndvi = ifelse(sum_bands != 0, diff_bands / sum_bands, 0))
 ```
 
@@ -853,6 +861,8 @@ Then, we can visualise the NDVI:
 ``` r
 plot(ndvi_data, axes = TRUE, main = "Normalized Difference Vegetation Index (NDVI)")
 ```
+
+    downsample set to 11
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/ndvi-plot-1.png)
 
@@ -868,7 +878,7 @@ tci_10m_asset <- item[["assets"]][["TCI_10m"]]
 
 tci_10m_url <- tci_10m_asset[["href"]]
 
-tci_10m_url %>%
+tci_10m_url |>
   zarr_overview()
 ```
 
@@ -888,7 +898,7 @@ respectively), since this is an RGB composite. This information is also
 available by looking at the assets’ bands:
 
 ``` r
-tci_10m_asset[["bands"]] %>%
+tci_10m_asset[["bands"]] |>
   map_dfr(as_tibble)
 ```
 
@@ -908,7 +918,7 @@ will just get the first 2 entries (in each dimension) along the three
 bands.
 
 ``` r
-tci_10m_preview <- tci_10m_url %>%
+tci_10m_preview <- tci_10m_url |>
   read_zarr_array(list(NULL, 1:2, 1:2))
 
 tci_10m_preview
@@ -945,7 +955,7 @@ the first to the third. Then, we can see that the dimensions of the
 array are correct:
 
 ``` r
-tci_10m_preview_perm <- tci_10m_preview %>%
+tci_10m_preview_perm <- tci_10m_preview |>
   aperm(c(2, 3, 1))
 
 tci_10m_preview_perm
@@ -978,10 +988,10 @@ dim(tci_10m_preview_perm)
 Let’s read in the full TCI array to visualise it.
 
 ``` r
-tci_10m <- tci_10m_url %>%
+tci_10m <- tci_10m_url |>
   read_zarr_array()
 
-tci_10m_perm <- tci_10m %>%
+tci_10m_perm <- tci_10m |>
   aperm(c(2, 3, 1))
 
 dim(tci_10m)
@@ -993,8 +1003,8 @@ For visualisation, we use `terra`’s `plotRGB()` function, first
 converting the array into a raster object with `rast()`:
 
 ``` r
-tci_10m_perm %>%
-  rast() %>%
+tci_10m_perm |>
+  rast() |>
   plotRGB()
 ```
 
@@ -1004,12 +1014,12 @@ We can do the same with the quicklook at the 60-metre resolution,
 showing the full visualisation process in a single step:
 
 ``` r
-zarr_store %>%
-  filter(array == "/quality/l2a_quicklook/r60m/tci") %>%
-  pull(path) %>%
-  read_zarr_array() %>%
-  aperm(c(2, 3, 1)) %>%
-  rast() %>%
+zarr_store |>
+  filter(array == "/quality/l2a_quicklook/r60m/tci") |>
+  pull(path) |>
+  read_zarr_array() |>
+  aperm(c(2, 3, 1)) |>
+  rast() |>
   plotRGB()
 ```
 
