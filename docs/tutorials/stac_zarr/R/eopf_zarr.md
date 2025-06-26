@@ -12,6 +12,13 @@
 -   [Read Zarr data](#read-zarr-data)
     -   [Coordinates](#coordinates)
     -   [Different resolutions](#different-resolutions)
+-   [Examples](#examples)
+    -   [Sentinel 2](#sentinel-2)
+        -   [NDVI](#ndvi)
+        -   <span id="rgb-quicklook-composite">RGB Quicklook
+            Composite</span>
+    -   [Sentinel 1](#sentinel-1)
+    -   [Sentinel 3](#sentinel-3)
 
 # Introduction
 
@@ -154,8 +161,8 @@ this.
 ``` r
 derive_store_array <- function(store, product_url) {
   store %>%
-  mutate(array = str_remove(path, product_url)) %>%
-  relocate(array, .before = path)
+    mutate(array = str_remove(path, product_url)) %>%
+    relocate(array, .before = path)
 }
 
 zarr_store <- product_url %>%
@@ -502,7 +509,7 @@ information from the full array path:
 ``` r
 l2_ocn_url <- l2_ocn %>%
   assets_select(asset_names = "product") %>%
-  assets_url() 
+  assets_url()
 
 l2_ocn_store <- l2_ocn_url %>%
   zarr_overview(as_data_frame = TRUE) %>%
@@ -716,7 +723,9 @@ plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colo
 
 ## Sentinel 2
 
-We will calculate the Normalized Difference Vegetation Index (NVDI) for
+# NDVI
+
+We will calculate the Normalized Difference Vegetation Index (NDVI) for
 data from the Sentinel-2 mission. This requires both the red (B04) and
 near-infrared (B08) bands. We will work with these at 20-metre
 resolution.
@@ -744,41 +753,69 @@ r20m
     11 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
     12 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
 
-We will read in the `B04` and `B08` bands, as well as the `x` and `y`
-coordinates, using the `map()` function to read them all in, and store
-them in a list.
+We will read in the `B04` band, as well as the `x` and `y` coordinates,
+using the `map()` function to read them all in, and store them in a
+list.
 
 ``` r
 r20m_arrays <- r20m %>%
   mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) %>%
   filter(array %in% c("b04", "x", "y")) %>%
   split(.$array) %>%
-  map(\(x) {
-    if (x[["array"]] == "b04") {
-    read_zarr_array(x[["path"]], list(1:50, 1:50))
-    } else {
-    read_zarr_array(x[["path"]], list(1:50))
-    }
-  })
+  map(\(x) read_zarr_array(x[["path"]]))
 ```
 
-b08 is only available at 10m, so get that, then aggregate it up to 20m
+The B08 band is only available at 10-metre resolution, so we read that
+in:
 
 ``` r
-r10m_b08 <- zarr_store %>% 
-  filter(array == "/measurements/reflectance/r10m/b08") %>% 
+r10m_b08 <- zarr_store %>%
+  filter(array == "/measurements/reflectance/r10m/b08") %>%
   pull(path) %>%
-  read_zarr_array(list(1:100, 1:100))
+  read_zarr_array()
+
+dim(r10m_b08)
 ```
 
-``` r
-r10m_b08 <- rast(r10m_b08)
+    [1] 10980 10980
 
-r20m_b08 <- aggregate(r10m_b08, fact = 2)
+And then use `terra`’s `aggregate()` to aggregate it up to 20-metre
+resolution. This reduces the dimension of the B08 band to be 50 x 50,
+matching the other 20-metre resolution bands.
+
+``` r
+r20m_b08 <- r10m_b08 %>%
+  rast() %>%
+  aggregate(fact = 2)
+
+dim(r20m_b08)
 ```
 
+    [1] 50 50  1
+
+The B08 band is now in a format that considers the number of **layers**,
+which we do not need. We can convert it back to an array so that it is
+in the same format as the other data.
+
 ``` r
-st_as_stars(b04 = r20m_arrays[["b04"]], b08 = as.array(r20m_b08)[,,1])
+r20m_b08 <- as.array(r20m_b08)[, , 1]
+```
+
+For NDVI, we need to calculate `sum_bands`, which is the sum of the
+Near-Infrared (B08) and Red bands (B04), and `diff_bands`, which is
+their difference. First, we will combine all of the arrays into a
+`stars` object, which allows us to do easy data manipulation on it. To
+create this object, we name the arrays specifically, and then set `x`
+and `y` as dimensions.
+
+``` r
+ndvi_data <- st_as_stars(
+  b04 = r20m_arrays[["b04"]], b08 = r20m_b08
+) %>%
+  st_set_dimensions("X1", r20m_arrays[["x"]], names = "x") %>%
+  st_set_dimensions("X2", r20m_arrays[["y"]], names = "y")
+
+ndvi_data
 ```
 
     stars object with 2 dimensions and 2 attributes
@@ -787,9 +824,37 @@ st_as_stars(b04 = r20m_arrays[["b04"]], b08 = as.array(r20m_b08)[,,1])
     b04  1101.0 1231.000 1291.0 1356.038 1421.000 3125
     b08  1936.5 3987.938 5036.5 4753.588 5498.312 8149
     dimension(s):
-       from to offset delta point x/y
-    X1    1 50      0     1 FALSE [x]
-    X2    1 50      0     1 FALSE [y]
+      from to  offset delta point x/y
+    x    1 50  600010    20 FALSE [x]
+    y    1 50 5300030   -20 FALSE [y]
+
+This is a useful format that shows us summary statistics on each array.
+More than that, we can now use `tidyverse`-style data operations, such
+as `mutate()` to derive new variables:
+
+``` r
+ndvi_data <- ndvi_data %>%
+  mutate(
+    sum_bands = b08 + b04,
+    diff_bands = b08 - b04
+  )
+```
+
+Then, we can derive the `ndvi` (`diff_bands` / `sum_bands`), handling
+any cases where `sum_bands` is 0 by setting the NDVI to 0:
+
+``` r
+ndvi_data <- ndvi_data %>%
+  mutate(ndvi = ifelse(sum_bands != 0, diff_bands / sum_bands, 0))
+```
+
+Then, we can visualise the NDVI:
+
+``` r
+plot(ndvi_data, axes = TRUE, main = "Normalized Difference Vegetation Index (NDVI)")
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/ndvi-plot-1.png)
 
 ### RGB Quicklook Composite
 
@@ -873,11 +938,11 @@ dim(tci_10m_preview)
     [1] 3 2 2
 
 Instead, we need to get it into e.g. 2 x 2 x 3, with the *third*
-dimension reflecting the bands. To do this, we use the `aperm()`
-function to transpose an array, with argument `c(2, 3, 1)` – moving the
-second dimension to the first, the third to the second, and the first to
-the third. Then, we can see that the dimensions of the array are
-correct:
+dimension reflecting the number of bands (or layers) To do this, we use
+the `aperm()` function to transpose an array, with argument `c(2, 3, 1)`
+– moving the second dimension to the first, the third to the second, and
+the first to the third. Then, we can see that the dimensions of the
+array are correct:
 
 ``` r
 tci_10m_preview_perm <- tci_10m_preview %>%
@@ -939,7 +1004,7 @@ We can do the same with the quicklook at the 60-metre resolution,
 showing the full visualisation process in a single step:
 
 ``` r
-zarr_store %>% 
+zarr_store %>%
   filter(array == "/quality/l2a_quicklook/r60m/tci") %>%
   pull(path) %>%
   read_zarr_array() %>%
