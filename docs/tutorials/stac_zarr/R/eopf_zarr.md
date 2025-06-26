@@ -791,43 +791,163 @@ st_as_stars(b04 = r20m_arrays[["b04"]], b08 = as.array(r20m_b08)[,,1])
     X1    1 50      0     1 FALSE [x]
     X2    1 50      0     1 FALSE [y]
 
-``` r
-tci_product <- zarr_store %>%
-  filter(array == "/quality/l2a_quicklook/r20m/tci") %>%
-  pull(path)
+### RGB Quicklook Composite
 
-tci_product %>%
+EOPF Zarr Assets include quicklook RGB composites, which are readily
+viewable representations of the satellite image. We will open the
+10-metre resolution quicklook and visualise it. This is available as an
+asset, so we can access it directly from the STAC item.
+
+``` r
+tci_10m_asset <- item[["assets"]][["TCI_10m"]]
+
+tci_10m_url <- tci_10m_asset[["href"]]
+
+tci_10m_url %>%
   zarr_overview()
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/quality/l2a_quicklook/r20m/tci/
-    Shape: 3 x 5490 x 5490
-    Chunk Shape: 1 x 915 x 915
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/quality/l2a_quicklook/r10m/tci/
+    Shape: 3 x 10980 x 10980
+    Chunk Shape: 1 x 1830 x 1830
     No. of Chunks: 108 (3 x 6 x 6)
     Data Type: uint8
     Endianness: NA
     Compressor: blosc
 
+From the overview, we can see that the quicklook array has three
+dimensions to it, each of size 10980 x 10980. The three dimensions
+correspond to red, green, and blue spectral bands (B04, B03, and B02,
+respectively), since this is an RGB composite. This information is also
+available by looking at the assets’ bands:
+
 ``` r
-# Lots of thoughts etc here... but for now....
-tci <- tci_product %>%
-  read_zarr_array(list(NULL, 1:5, 1:5))
-
-# Reading in part of the array, we see it's not in the right format, e.g. we want [,,1] [,,2] and [,,3], so # of bands along the third dimension is 3 bc it's RGB, so need to reshape
-
-tci <- tci_product %>%
-  read_zarr_array()
-
-tci %>% 
-  aperm(c(2,3,1)) %>% # reformat
-  st_as_stars() %>% # make into stars object
-  st_rgb() %>% # Treat channels as RGB
-  plot()
+tci_10m_asset[["bands"]] %>%
+  map_dfr(as_tibble)
 ```
 
-    downsample set to 11
+    # A tibble: 3 × 5
+      name  common_name description    center_wavelength full_width_half_max
+      <chr> <chr>       <chr>                      <dbl>               <dbl>
+    1 B04   red         Red (band 4)               0.665               0.038
+    2 B03   green       Green (band 3)             0.56                0.045
+    3 B02   blue        Blue (band 2)              0.49                0.098
 
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/rgb-quicklook-1.png)
+We can read in a small chunk of the array to get an idea of its shape,
+using the same indexing process we’ve used before. Note that we want to
+select *all* of the bands (the first dimension listed). Rather than
+writing `1:3`, we can simply use `NULL` as the first dimension,
+indicating to get all data at this dimension. To preview the data, we
+will just get the first 2 entries (in each dimension) along the three
+bands.
+
+``` r
+tci_10m_preview <- tci_10m_url %>%
+  read_zarr_array(list(NULL, 1:2, 1:2))
+
+tci_10m_preview
+```
+
+    , , 1
+
+         [,1] [,2]
+    [1,]   16   20
+    [2,]   31   34
+    [3,]   15   19
+
+    , , 2
+
+         [,1] [,2]
+    [1,]   16   18
+    [2,]   30   34
+    [3,]   13   20
+
+For visualization purposes, we need the data in a different
+configuration — note the dimensions of the data:
+
+``` r
+dim(tci_10m_preview)
+```
+
+    [1] 3 2 2
+
+Instead, we need to get it into e.g. 2 x 2 x 3, with the *third*
+dimension reflecting the bands. To do this, we use the `aperm()`
+function to transpose an array, with argument `c(2, 3, 1)` – moving the
+second dimension to the first, the third to the second, and the first to
+the third. Then, we can see that the dimensions of the array are
+correct:
+
+``` r
+tci_10m_preview_perm <- tci_10m_preview %>%
+  aperm(c(2, 3, 1))
+
+tci_10m_preview_perm
+```
+
+    , , 1
+
+         [,1] [,2]
+    [1,]   16   16
+    [2,]   20   18
+
+    , , 2
+
+         [,1] [,2]
+    [1,]   31   30
+    [2,]   34   34
+
+    , , 3
+
+         [,1] [,2]
+    [1,]   15   13
+    [2,]   19   20
+
+``` r
+dim(tci_10m_preview_perm)
+```
+
+    [1] 2 2 3
+
+Let’s read in the full TCI array to visualise it.
+
+``` r
+tci_10m <- tci_10m_url %>%
+  read_zarr_array()
+
+tci_10m_perm <- tci_10m %>%
+  aperm(c(2, 3, 1))
+
+dim(tci_10m)
+```
+
+    [1]     3 10980 10980
+
+For visualisation, we use `terra`’s `plotRGB()` function, first
+converting the array into a raster object with `rast()`:
+
+``` r
+tci_10m_perm %>%
+  rast() %>%
+  plotRGB()
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/tci-10m-vis-1.png)
+
+We can do the same with the quicklook at the 60-metre resolution,
+showing the full visualisation process in a single step:
+
+``` r
+zarr_store %>% 
+  filter(array == "/quality/l2a_quicklook/r60m/tci") %>%
+  pull(path) %>%
+  read_zarr_array() %>%
+  aperm(c(2, 3, 1)) %>%
+  rast() %>%
+  plotRGB()
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/tci-60m-vis-1.png)
 
 ## Sentinel 3
