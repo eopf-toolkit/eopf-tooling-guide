@@ -20,10 +20,8 @@ editor_options:
   - [Coordinates](#coordinates)
   - [Different resolutions](#different-resolutions)
 - [Examples](#examples)
-  - [Sentinel-2](#sentinel-2)
-    - [NDVI](#ndvi)
-    - [RGB Quicklook Composite](#rgb-quicklook-composite)
   - [Sentinel-1](#sentinel-1)
+  - [Sentinel-2](#sentinel-2)
   - [Sentinel-3](#sentinel-3)
   
 # Introduction
@@ -342,6 +340,7 @@ owi |>
   pull(path) |>
   zarr_overview()
 ```
+
 Here, we can see that all of the arrays are of the same shape: 167 x 255, with only one chunk. Since these are small, we can read all of the data in at once. This is done by _not_ supplying any additional arguments to `read_zarr_array()`:
 
 ```{r owi-read}
@@ -391,112 +390,6 @@ plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colo
 ```
 
 ## Sentinel-2
-
-#### NDVI
-
-We will calculate the Normalized Difference Vegetation Index (NDVI) for data from the Sentinel-2 mission. This requires both the red (B04) and near-infrared (B08) bands. We will work with these at 20-metre resolution.
-
-Recall that we already have an object `r20m` which contains the arrays at 20-metre resolution:
-
-```{r r20m-print}
-r20m
-```
-
-We will read in the `B04` band, as well as the `x` and `y` coordinates.
-
-```{r r20m-arrays}
-r20m_b04 <- r20m %>%
-  filter(array == "/measurements/reflectance/r20m/b04") %>%
-  pull(path) %>%
-  read_zarr_array()
-
-r20m_x <- r20m %>%
-  filter(array == "/measurements/reflectance/r20m/x") %>%
-  pull(path) %>%
-  read_zarr_array()
-
-r20m_y <- r20m %>%
-  filter(array == "/measurements/reflectance/r20m/y") %>%
-  pull(path) %>%
-  read_zarr_array()
-```
-
-The B08 band is only available at 10-metre resolution, so we read that in:
-
-```{r r10m-b08}
-r10m_b08 <- zarr_store |>
-  filter(array == "/measurements/reflectance/r10m/b08") |>
-  pull(path) |>
-  read_zarr_array()
-
-dim(r10m_b08)
-```
-
-```{r r10m0-b08-save}
-#| echo: false
-# saveRDS(r10m_b08, here::here("data", "r10m_b08.rds"))
-r10m_b08 <- readRDS(here::here("data", "r10m_b08.rds"))
-
-# saveRDS(r20m_arrays, here::here("data", "r20m_arrays.rds"))
-r20m_arrays <- readRDS(here::here("data", "r20m_arrays.rds"))
-r20m_b04 <- r20m_arrays[["b04"]]
-r20m_x <- r20m_arrays[["x"]]
-r20m_y <- r20m_arrays[["y"]]
-```
-
-And then use `terra`'s `aggregate()` to aggregate it up to 20-metre resolution. This reduces the dimension of the B08 band to be 5490 x 5490, matching the other 20-metre resolution bands.
-
-```{r terra-agg}
-r20m_b08 <- r10m_b08 |>
-  rast() |>
-  aggregate(fact = 2)
-
-dim(r20m_b08)
-```
-
-The B08 band is now in a format that considers the number of **layers**, which we do not need. We can convert it back to an array so that it is in the same format as the other data.
-
-```{r r20m-b08-array}
-r20m_b08 <- as.array(r20m_b08)[, , 1]
-```
-
-For NDVI, we need to calculate `sum_bands`, which is the sum of the Near-Infrared (B08) and Red bands (B04), and `diff_bands`, which is their difference. 
-
-```{r ndvi-int-calcs}
-sum_bands <- r20m_b08 + r20m_b04
-diff_bands <- r20m_b08 - r20m_b04
-```
-
-Then, we can derive the `ndvi` (`diff_bands` / `sum_bands`), handling any cases where `sum_bands` is 0 (causing `ndvi` to be `NAN`) by setting the NDVI to 0:
-
-```{r ndvi-calc}
-ndvi <- diff_bands / sum_bands
-ndvi <- ifelse(is.nan(ndvi), 0, ndvi)
-```
-
-Then, we make the new array into a raster object:
-
-```{r ndvi-rast}
-ndvi_rast <- rast(
-  ncol = ncol(ndvi), nrow = nrow(ndvi), 
-  crs = item[["properties"]][["proj:code"]],
-  xmin = min(r20m_x), xmax = max(r20m_x),
-  ymin = min(r20m_y), ymax = max(r20m_y),
-)
-
-values(ndvi_rast) <- ndvi
-
-ndvi_rast
-```
-
-And visualise it:
-
-```{r ndvi-vis}
-ndvi_rast |>
-  plot(axes = TRUE, main = "Normalized Difference Vegetation Index (NDVI)", col = hcl.colors(100, "RdYlGn"))
-```
-
-### RGB Quicklook Composite
 
 EOPF Zarr Assets include quicklook RGB composites, which are readily viewable representations of the satellite image. We will open the 10-metre resolution quicklook and visualise it. This is available as an asset, so we can access it directly from the STAC item.
 
@@ -672,8 +565,6 @@ gifapar_stars <- st_as_stars(gifapar = gifapar) |>
 
 gifapar_stars
 ``` 
-
-TODO -> mention missing data?
 
 Finally, we plot the GIFAPAR:
 

@@ -13,10 +13,8 @@
     -   [Coordinates](#coordinates)
     -   [Different resolutions](#different-resolutions)
 -   [Examples](#examples)
-    -   [Sentinel-2](#sentinel-2)
-        -   [NDVI](#ndvi)
-        -   [RGB Quicklook Composite](#rgb-quicklook-composite)
     -   [Sentinel-1](#sentinel-1)
+    -   [Sentinel-2](#sentinel-2)
     -   [Sentinel-3](#sentinel-3)
 
 # Introduction
@@ -721,152 +719,6 @@ plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colo
 
 ## Sentinel-2
 
-#### NDVI
-
-We will calculate the Normalized Difference Vegetation Index (NDVI) for
-data from the Sentinel-2 mission. This requires both the red (B04) and
-near-infrared (B08) bands. We will work with these at 20-metre
-resolution.
-
-Recall that we already have an object `r20m` which contains the arrays
-at 20-metre resolution:
-
-``` r
-r20m
-```
-
-    # A tibble: 12 × 7
-       array                      path  nchunks data_type compressor dim   chunk_dim
-       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-     1 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     2 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     3 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     4 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     5 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     6 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     7 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     8 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     9 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-    10 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-    11 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
-    12 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
-
-We will read in the `B04` band, as well as the `x` and `y` coordinates.
-
-``` r
-r20m_b04 <- r20m %>%
-  filter(array == "/measurements/reflectance/r20m/b04") %>%
-  pull(path) %>%
-  read_zarr_array()
-
-r20m_x <- r20m %>%
-  filter(array == "/measurements/reflectance/r20m/x") %>%
-  pull(path) %>%
-  read_zarr_array()
-
-r20m_y <- r20m %>%
-  filter(array == "/measurements/reflectance/r20m/y") %>%
-  pull(path) %>%
-  read_zarr_array()
-```
-
-The B08 band is only available at 10-metre resolution, so we read that
-in:
-
-``` r
-r10m_b08 <- zarr_store |>
-  filter(array == "/measurements/reflectance/r10m/b08") |>
-  pull(path) |>
-  read_zarr_array()
-
-dim(r10m_b08)
-```
-
-    [1] 10980 10980
-
-And then use `terra`’s `aggregate()` to aggregate it up to 20-metre
-resolution. This reduces the dimension of the B08 band to be 5490 x
-5490, matching the other 20-metre resolution bands.
-
-``` r
-r20m_b08 <- r10m_b08 |>
-  rast() |>
-  aggregate(fact = 2)
-```
-
-
-    |---------|---------|---------|---------|
-    =========================================
-                                              
-
-``` r
-dim(r20m_b08)
-```
-
-    [1] 5490 5490    1
-
-The B08 band is now in a format that considers the number of **layers**,
-which we do not need. We can convert it back to an array so that it is
-in the same format as the other data.
-
-``` r
-r20m_b08 <- as.array(r20m_b08)[, , 1]
-```
-
-For NDVI, we need to calculate `sum_bands`, which is the sum of the
-Near-Infrared (B08) and Red bands (B04), and `diff_bands`, which is
-their difference.
-
-``` r
-sum_bands <- r20m_b08 + r20m_b04
-diff_bands <- r20m_b08 - r20m_b04
-```
-
-Then, we can derive the `ndvi` (`diff_bands` / `sum_bands`), handling
-any cases where `sum_bands` is 0 (causing `ndvi` to be `NAN`) by setting
-the NDVI to 0:
-
-``` r
-ndvi <- diff_bands / sum_bands
-ndvi <- ifelse(is.nan(ndvi), 0, ndvi)
-```
-
-Then, we make the new array into a raster object:
-
-``` r
-ndvi_rast <- rast(
-  ncol = ncol(ndvi), nrow = nrow(ndvi), 
-  crs = item[["properties"]][["proj:code"]],
-  xmin = min(r20m_x), xmax = max(r20m_x),
-  ymin = min(r20m_y), ymax = max(r20m_y),
-)
-
-values(ndvi_rast) <- ndvi
-
-ndvi_rast
-```
-
-    class       : SpatRaster 
-    size        : 5490, 5490, 1  (nrow, ncol, nlyr)
-    resolution  : 19.99636, 19.99636  (x, y)
-    extent      : 600010, 709790, 5190250, 5300030  (xmin, xmax, ymin, ymax)
-    coord. ref. : WGS 84 / UTM zone 32N (EPSG:32632) 
-    source(s)   : memory
-    name        : lyr.1 
-    min value   :    -1 
-    max value   :     1 
-
-And visualise it:
-
-``` r
-ndvi_rast |>
-  plot(axes = TRUE, main = "Normalized Difference Vegetation Index (NDVI)", col = hcl.colors(100, "RdYlGn"))
-```
-
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/ndvi-vis-1.png)
-
-### RGB Quicklook Composite
-
 EOPF Zarr Assets include quicklook RGB composites, which are readily
 viewable representations of the satellite image. We will open the
 10-metre resolution quicklook and visualise it. This is available as an
@@ -1258,8 +1110,6 @@ gifapar_stars
     X1    1 4091 WGS 84 (CRS84) FALSE [4091x4865] -10.86,...,9.139 [x]
     X2    1 4865 WGS 84 (CRS84) FALSE  [4091x4865] 39.54,...,52.45 [y]
     curvilinear grid
-
-TODO -\> mention missing data?
 
 Finally, we plot the GIFAPAR:
 
