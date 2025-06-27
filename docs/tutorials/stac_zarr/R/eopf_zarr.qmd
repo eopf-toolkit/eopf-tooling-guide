@@ -22,7 +22,7 @@ editor_options:
 - [Examples](#examples)
   - [Sentinel-2](#sentinel-2)
     - [NDVI](#ndvi)
-    - [RGB Quicklook Composite]{#rgb-quicklook-composite}
+    - [RGB Quicklook Composite](#rgb-quicklook-composite)
   - [Sentinel-1](#sentinel-1)
   - [Sentinel-3](#sentinel-3)
   
@@ -36,9 +36,7 @@ An R environment is required to follow this tutorial, with R version >= 4.1.0. W
 
 ## Dependencies
 
-We will use the `rstac` package (for accessing the STAC catalog), the `tidyverse` package (for data manipulation), and the `stars` package (for working with spatiotemporal data) in this tutorial. You can install them directly from CRAN:
-
-(TODO add terra)
+We will use the following packages in this tutorial: `rstac` (for accessing the STAC catalog), `tidyverse` (for data manipulation), `stars` (for working with spatiotemporal data) , and `terra` (for manipulating spatial data in raster format). You can install them directly from CRAN:
 
 ```{r install-rstac}
 #| eval: false
@@ -404,17 +402,23 @@ Recall that we already have an object `r20m` which contains the arrays at 20-met
 r20m
 ```
 
-We will read in the `B04` band, as well as the `x` and `y` coordinates, using the `map()` function to read them all in, and store them in a list.
+We will read in the `B04` band, as well as the `x` and `y` coordinates.
 
-```{r r20m-arrays-ex}
-r20m_arrays <- r20m |>
-  mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) |>
-  filter(array %in% c("b04", "x", "y"))
+```{r r20m-arrays}
+r20m_b04 <- r20m %>%
+  filter(array == "/measurements/reflectance/r20m/b04") %>%
+  pull(path) %>%
+  read_zarr_array()
 
-# TODO -> just do this one by one
+r20m_x <- r20m %>%
+  filter(array == "/measurements/reflectance/r20m/x") %>%
+  pull(path) %>%
+  read_zarr_array()
 
-r20m_arrays <- split(r20m_arrays, c("b04", "x", "y")) |>
-  map(\(x) read_zarr_array(x[["path"]]))
+r20m_y <- r20m %>%
+  filter(array == "/measurements/reflectance/r20m/y") %>%
+  pull(path) %>%
+  read_zarr_array()
 ```
 
 The B08 band is only available at 10-metre resolution, so we read that in:
@@ -435,6 +439,9 @@ r10m_b08 <- readRDS(here::here("data", "r10m_b08.rds"))
 
 # saveRDS(r20m_arrays, here::here("data", "r20m_arrays.rds"))
 r20m_arrays <- readRDS(here::here("data", "r20m_arrays.rds"))
+r20m_b04 <- r20m_arrays[["b04"]]
+r20m_x <- r20m_arrays[["x"]]
+r20m_y <- r20m_arrays[["y"]]
 ```
 
 And then use `terra`'s `aggregate()` to aggregate it up to 20-metre resolution. This reduces the dimension of the B08 band to be 5490 x 5490, matching the other 20-metre resolution bands.
@@ -456,8 +463,8 @@ r20m_b08 <- as.array(r20m_b08)[, , 1]
 For NDVI, we need to calculate `sum_bands`, which is the sum of the Near-Infrared (B08) and Red bands (B04), and `diff_bands`, which is their difference. 
 
 ```{r ndvi-int-calcs}
-sum_bands <- r20m_b08 + r20m_arrays[["b04"]]
-diff_bands <- r20m_b08 - r20m_arrays[["b04"]]
+sum_bands <- r20m_b08 + r20m_b04
+diff_bands <- r20m_b08 - r20m_b04
 ```
 
 Then, we can derive the `ndvi` (`diff_bands` / `sum_bands`), handling any cases where `sum_bands` is 0 (causing `ndvi` to be `NAN`) by setting the NDVI to 0:
@@ -473,8 +480,8 @@ Then, we make the new array into a raster object:
 ndvi_rast <- rast(
   ncol = ncol(ndvi), nrow = nrow(ndvi), 
   crs = item[["properties"]][["proj:code"]],
-  xmin = min(r20m_arrays[["x"]]), xmax = max(r20m_arrays[["x"]]),
-  ymin = min(r20m_arrays[["y"]]), ymax = max(r20m_arrays[["y"]]),
+  xmin = min(r20m_x), xmax = max(r20m_x),
+  ymin = min(r20m_y), ymax = max(r20m_y),
 )
 
 values(ndvi_rast) <- ndvi
@@ -662,8 +669,6 @@ Again, both `longitude` and `latitude` are unevenly spaced 2-dimensional arrays.
 ```{r gifapar-stars}
 gifapar_stars <- st_as_stars(gifapar = gifapar) |>
   st_as_stars(curvilinear = list(X1 = gifapar_long, X2 = gifapar_lat))
-
-# TODO, set crs, same in prior example
 
 gifapar_stars
 ``` 

@@ -15,8 +15,7 @@
 -   [Examples](#examples)
     -   [Sentinel-2](#sentinel-2)
         -   [NDVI](#ndvi)
-        -   <span id="rgb-quicklook-composite">RGB Quicklook
-            Composite</span>
+        -   [RGB Quicklook Composite](#rgb-quicklook-composite)
     -   [Sentinel-1](#sentinel-1)
     -   [Sentinel-3](#sentinel-3)
 
@@ -39,12 +38,11 @@ for a self-contained coding environment.
 
 ## Dependencies
 
-We will use the `rstac` package (for accessing the STAC catalog), the
-`tidyverse` package (for data manipulation), and the `stars` package
-(for working with spatiotemporal data) in this tutorial. You can install
-them directly from CRAN:
-
-(TODO add terra)
+We will use the following packages in this tutorial: `rstac` (for
+accessing the STAC catalog), `tidyverse` (for data manipulation),
+`stars` (for working with spatiotemporal data) , and `terra` (for
+manipulating spatial data in raster format). You can install them
+directly from CRAN:
 
 ``` r
 install.packages("rstac")
@@ -753,19 +751,23 @@ r20m
     11 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
     12 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
 
-We will read in the `B04` band, as well as the `x` and `y` coordinates,
-using the `map()` function to read them all in, and store them in a
-list.
+We will read in the `B04` band, as well as the `x` and `y` coordinates.
 
 ``` r
-r20m_arrays <- r20m |>
-  mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) |>
-  filter(array %in% c("b04", "x", "y"))
+r20m_b04 <- r20m %>%
+  filter(array == "/measurements/reflectance/r20m/b04") %>%
+  pull(path) %>%
+  read_zarr_array()
 
-# TODO -> just do this one by one
+r20m_x <- r20m %>%
+  filter(array == "/measurements/reflectance/r20m/x") %>%
+  pull(path) %>%
+  read_zarr_array()
 
-r20m_arrays <- split(r20m_arrays, c("b04", "x", "y")) |>
-  map(\(x) read_zarr_array(x[["path"]]))
+r20m_y <- r20m %>%
+  filter(array == "/measurements/reflectance/r20m/y") %>%
+  pull(path) %>%
+  read_zarr_array()
 ```
 
 The B08 band is only available at 10-metre resolution, so we read that
@@ -816,8 +818,8 @@ Near-Infrared (B08) and Red bands (B04), and `diff_bands`, which is
 their difference.
 
 ``` r
-sum_bands <- r20m_b08 + r20m_arrays[["b04"]]
-diff_bands <- r20m_b08 - r20m_arrays[["b04"]]
+sum_bands <- r20m_b08 + r20m_b04
+diff_bands <- r20m_b08 - r20m_b04
 ```
 
 Then, we can derive the `ndvi` (`diff_bands` / `sum_bands`), handling
@@ -835,8 +837,8 @@ Then, we make the new array into a raster object:
 ndvi_rast <- rast(
   ncol = ncol(ndvi), nrow = nrow(ndvi), 
   crs = item[["properties"]][["proj:code"]],
-  xmin = min(r20m_arrays[["x"]]), xmax = max(r20m_arrays[["x"]]),
-  ymin = min(r20m_arrays[["y"]]), ymax = max(r20m_arrays[["y"]]),
+  xmin = min(r20m_x), xmax = max(r20m_x),
+  ymin = min(r20m_y), ymax = max(r20m_y),
 )
 
 values(ndvi_rast) <- ndvi
@@ -1243,8 +1245,6 @@ visualisation:
 ``` r
 gifapar_stars <- st_as_stars(gifapar = gifapar) |>
   st_as_stars(curvilinear = list(X1 = gifapar_long, X2 = gifapar_lat))
-
-# TODO, set crs, same in prior example
 
 gifapar_stars
 ```
