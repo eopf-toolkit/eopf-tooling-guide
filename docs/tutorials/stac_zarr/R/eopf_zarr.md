@@ -1,4 +1,4 @@
-# Access and Analyze EOPF STAC Zarr Data with R
+# Access and Analyse EOPF STAC Zarr Data with R
 
 
 # Table of Contents
@@ -19,7 +19,7 @@
 
 # Introduction
 
-This tutorial will explore how to access and analyze Zarr data from the
+This tutorial will explore how to access and analyse Zarr data from the
 [EOPF Sample Service STAC
 catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using
 R.
@@ -36,16 +36,19 @@ for a self-contained coding environment.
 
 ## Dependencies
 
-We will use the following packages in this tutorial: `rstac` (for
-accessing the STAC catalog), `tidyverse` (for data manipulation),
-`stars` (for working with spatiotemporal data) , and `terra` (for
-manipulating spatial data in raster format). You can install them
-directly from CRAN:
+We will use the following packages in this tutorial:
+[`rstac`](https://brazil-data-cube.github.io/rstac/) (for accessing the
+STAC catalog), [`tidyverse`](https://tidyverse.tidyverse.org/) (for data
+manipulation), [`stars`](https://r-spatial.github.io/stars/)) (for
+working with spatiotemporal data) , and
+[`terra`](https://rspatial.github.io/terra/index.html) (for manipulating
+spatial data in raster format). You can install them directly from CRAN:
 
 ``` r
 install.packages("rstac")
 install.packages("tidyverse")
 install.packages("stars")
+install.packages("terra")
 ```
 
 We will also use the `Rarr` package to read Zarr data. It must be
@@ -73,12 +76,12 @@ library(terra)
 
 ## Fixes to the `Rarr` package
 
-We will use functions from the `Rarr` package to read and analyze Zarr
+We will use functions from the `Rarr` package to read and analyse Zarr
 data. Unfortunately, there is currently a bug in this package, causing
-it to parse the EOPF Sample Service data URLs incorrectly – there is a
-[pull request](https://github.com/grimbough/Rarr/pull/21) open to fix
-this. In the meantime, we will write our own version of this URL parsing
-function and use it instead of the one in `Rarr`.
+it to parse the EOPF Sample Service data URLs incorrectly – it has been
+fixed and will be updated in the next release of `Rarr`. In the
+meantime, we will write our own version of this URL parsing function and
+use it instead of the one in `Rarr`.
 
 ``` r
 .url_parse_other <- function(url) {
@@ -129,18 +132,18 @@ We fetch the “product” asset under a given item, and can look at its
 URL:
 
 ``` r
-item <- stac("https://stac.core.eopf.eodc.eu/") |>
+s2_l2a_item <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-2-l2a") |>
   items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") |>
   get_request()
 
-product <- item |>
+s2_l2a_product <- s2_l2a_item |>
   assets_select(asset_names = "product")
 
-product_url <- product |>
+s2_l2a_product_url <- s2_l2a_product |>
   assets_url()
 
-product_url
+s2_l2a_product_url
 ```
 
     [1] "https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr"
@@ -261,7 +264,7 @@ r20m_b02 |>
     Compressor: blosc
 
 The above overview tells us that the data is two-dimensional, with
-dimensions 5490 x 5490 Zarr data is split up into *chunks*, which are
+dimensions 5490 x 5490. Zarr data is split up into **chunks**, which are
 smaller, independent piece of the larger array. Chunks can be accessed
 individually, without loading the entire array. In this case, there are
 36 chunks in total, with 6 along each of the dimensions, each of size
@@ -270,14 +273,14 @@ individually, without loading the entire array. In this case, there are
 # Read Zarr data
 
 To read in Zarr data, we use `read_zarr_array()`, and can pass a list to
-the `index` argument, describing which elements we want to extract,
-along each dimension. Since this array is two-dimensional, we can think
-of the dimensions as rows and columns of the data. For example, to
-select the first 10 rows and the first 5 columns:
+the `index` argument, describing which elements we want to extract along
+each dimension. Since this array is two-dimensional, we can think of the
+dimensions as rows and columns of the data. For example, to select the
+first 10 rows and the first 5 columns:
 
 ``` r
 r20m_b02 |>
-  read_zarr_array(list(1:10, 1:5))
+  read_zarr_array(index = list(1:10, 1:5))
 ```
 
           [,1] [,2] [,3] [,4] [,5]
@@ -292,33 +295,18 @@ r20m_b02 |>
      [9,] 1138 1151 1149 1312 1340
     [10,] 1152 1157 1227 1393 1340
 
-Or, to select rows rows 4215 to 4220 and columns 1 to 5:
-
-``` r
-r20m_b02 |>
-  read_zarr_array(list(4215:4220, 1:5))
-```
-
-         [,1] [,2] [,3] [,4] [,5]
-    [1,] 8766 9702 8874 8296 8279
-    [2,] 8398 9654 9225 8396 7949
-    [3,] 7825 8083 8741 8653 7528
-    [4,] 4534 2968 5217 8685 7193
-    [5,] 1810 2078 3950 6415 6422
-    [6,] 6773 3676 2430 2563 4955
-
 ## Coordinates
 
 Similarly, we can read in the `x` and `y` coordinates corresponding to
 data at 10m resolution. These `x` and `y` coordinates do not correspond
-to latitude and longitude–to understand the coordinate reference system
-used in each data set, we access the “`proj:espg`” property of the STAC
+to latitude and longitude—to understand the coordinate reference system
+used in each data set, we access the `proj:code` property of the STAC
 item. In this case, the coordinate reference system is
 [EPSG:32626](https://epsg.io/32626), which represents metres from the
 UTM zone’s origin.
 
 ``` r
-item[["properties"]][["proj:code"]]
+s2_l2a_item[["properties"]][["proj:code"]]
 ```
 
     [1] "EPSG:32632"
@@ -376,9 +364,9 @@ r20m_x |>
 
     [1] 600010 600030 600050 600070 600090
 
-Or, we can read in the whole array and view its first few values with
-`head()`. Of course, reading in the whole array, rather than a small
-section of it, will take longer.
+Or, we can read in the whole array (by not providing any elements to
+`index`) and view its first few values with `head()`. Of course, reading
+in the whole array, rather than a small section of it, will take longer.
 
 ``` r
 r20m_x |>
@@ -406,17 +394,18 @@ For example, we can see that the B02 spectral band is available at 10m,
 b02 <- zarr_store |>
   filter(str_starts(array, "/measurements/reflectance"), str_ends(array, "b02"))
 
-b02
+b02 |>
+  select(array)
 ```
 
-    # A tibble: 3 × 7
-      array                       path  nchunks data_type compressor dim   chunk_dim
-      <chr>                       <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-    1 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
-    2 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
-    3 /measurements/reflectance/… http…      36 uint16    blosc      <int> <int [2]>
+    # A tibble: 3 × 1
+      array                             
+      <chr>                             
+    1 /measurements/reflectance/r10m/b02
+    2 /measurements/reflectance/r20m/b02
+    3 /measurements/reflectance/r60m/b02
 
-The resolution affects the dimensions of the data; when measurements are
+The resolution affects the dimensions of the data: when measurements are
 taken at a higher resolution, there will be more data. We can see here
 that there is more data for the 10m resolution than the 20m resolution
 (recall, its dimensions are 5490 x 5490), and less for the 60m
@@ -472,7 +461,8 @@ l2_ocn
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-We can look at each of the assets’ to understand what the item contains:
+We can look at each of the assets’ titles to understand what the item
+contains:
 
 ``` r
 l2_ocn |>
@@ -496,10 +486,10 @@ l2_ocn |>
     [1] "Consolidated Metadata"
 
 We are interested in the “Ocean Wind field” data, and will hold onto the
-“owi” key for now.
+`owi` key for now.
 
-To access all of the `owi` data, we get the `"product"` asset and then
-the full Zarr store, again using our helper function to extract array
+To access all of the `owi` data, we get the “product” asset and then the
+full Zarr store, again using our helper function to extract array
 information from the full array path:
 
 ``` r
@@ -618,8 +608,7 @@ owi |>
 
 Here, we can see that all of the arrays are of the same shape: 167 x
 255, with only one chunk. Since these are small, we can read all of the
-data in at once. This is done by *not* supplying any additional
-arguments to `read_zarr_array()`:
+data in at once.
 
 ``` r
 owi_wind_direction <- owi |>
@@ -669,18 +658,15 @@ owi_lat[1:5, 1:5]
     [4,] 30.28940 30.29110 30.29280 30.29450 30.29620
     [5,] 30.29842 30.30012 30.30182 30.30351 30.30521
 
-Note that, unlike in the previous example with `x` and `y` coordinates
-that we explored, both `longitude` and `latitude` are 2-dimensional
-arrays, and they are not evenly spaced. Rather, the data grid is
-**curvilinear** — it has grid lines that are not straight, and there is
-a longitude and latitude for every pixel of the other layers (i.e.,
-`wind_direction`). This format is very common in satellite data.
+Note that both `longitude` and `latitude` are 2-dimensional arrays, and
+they are not evenly spaced. Rather, the data grid is **curvilinear** —
+it has grid lines that are not straight, and there is a longitude and
+latitude for every pixel of the other layers (i.e., `wind_direction`).
+This format is very common in satellite data.
 
-We use functions from the [`stars`
-package](https://r-spatial.github.io/stars/), loaded earlier, to format
-the data for visualisation. `stars` is specifically designed for
-reading, manipulating, and plotting spatiotemporal data, such as
-satellite data.
+We use functions from the `stars` package, loaded earlier, to format the
+data for visualisation. `stars` is specifically designed for reading,
+manipulating, and plotting spatiotemporal data, such as satellite data.
 
 The function `st_as_stars()` is used to get our data into the correct
 format for visualisation:
@@ -712,7 +698,7 @@ owi_stars
 Finally, we can plot this object:
 
 ``` r
-plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
+plot(owi_stars, main = "Wind Direction", as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/owi-plot-1.png)
@@ -725,9 +711,11 @@ viewable representations of the satellite image. We will open the
 asset, so we can access it directly from the STAC item.
 
 ``` r
-tci_10m_asset <- item[["assets"]][["TCI_10m"]]
+tci_10m_asset <- s2_l2a_item |>
+  assets_select(asset_names = "TCI_10m")
 
-tci_10m_url <- tci_10m_asset[["href"]]
+tci_10m_url <- tci_10m_asset |>
+  assets_url()
 
 tci_10m_url |>
   zarr_overview()
@@ -749,7 +737,7 @@ respectively), since this is an RGB composite. This information is also
 available by looking at the assets’ bands:
 
 ``` r
-tci_10m_asset[["bands"]] |>
+s2_l2a_item[["assets"]][["TCI_10m"]][["bands"]] |>
   map_dfr(as_tibble)
 ```
 
@@ -789,7 +777,7 @@ tci_10m_preview
     [2,]   30   34
     [3,]   13   20
 
-For visualization purposes, we need the data in a different
+For visualisation purposes, we need the data in a different
 configuration — note the dimensions of the data:
 
 ``` r
@@ -907,43 +895,6 @@ l2_lfr
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-``` r
-l2_lfr |>
-  pluck("assets") |>
-  map("title")
-```
-
-    $iwv
-    [1] "Integrated Water Vapour Column"
-
-    $lagp
-    [1] "Land and atmospheric geophysical products"
-
-    $lqsf
-    [1] "Land Quality and Science Flags"
-
-    $otci
-    [1] "OLCI Terrestrial Chlorophyll Index"
-
-    $rc681
-    [1] "Green Instantaneous FAPAR (GIFAPAR) - Rectified Reflectance - red channel"
-
-    $rc865
-    [1] "Green Instantaneous FAPAR (GIFAPAR) - Rectified Reflectance - NIR channel"
-
-    $gifapar
-    [1] "Green Instantaneous FAPAR (GIFAPAR)"
-
-    $product
-    [1] "EOPF Product"
-
-    $product_metadata
-    [1] "Consolidated Metadata"
-
-Similarly to the Sentinel-2 example, since we are interested in the
-“Green Instantaneous FAPAR (GIFAPAR)” data, we will hold onto the
-`gifapar` key for now.
-
 To access all of the data, we get the “product” asset and then the full
 Zarr store, again using our helper function to extract array information
 from the full array path:
@@ -978,8 +929,8 @@ l2_lfr_store
 Next, we filter to access measurement data only:
 
 ``` r
-l2_lfr_measurements <- l2_lfr_store %>%
-  filter(str_starts(array, "/measurements")) %>%
+l2_lfr_measurements <- l2_lfr_store |>
+  filter(str_starts(array, "/measurements")) |>
   mutate(array = str_remove(array, "/measurements/"))
 
 l2_lfr_measurements
@@ -1001,9 +952,9 @@ Of these, we are interested in `gifapar` as well as `longitude` and
 structures:
 
 ``` r
-l2_lfr_measurements %>%
-  filter(array == "gifapar") %>%
-  pull(path) %>%
+l2_lfr_measurements |>
+  filter(array == "gifapar") |>
+  pull(path) |>
   zarr_overview()
 ```
 
@@ -1017,9 +968,9 @@ l2_lfr_measurements %>%
     Compressor: blosc
 
 ``` r
-l2_lfr_measurements %>%
-  filter(array == "longitude") %>%
-  pull(path) %>%
+l2_lfr_measurements |>
+  filter(array == "longitude") |>
+  pull(path) |>
   zarr_overview()
 ```
 
@@ -1033,9 +984,9 @@ l2_lfr_measurements %>%
     Compressor: blosc
 
 ``` r
-l2_lfr_measurements %>%
-  filter(array == "latitude") %>%
-  pull(path) %>%
+l2_lfr_measurements |>
+  filter(array == "latitude") |>
+  pull(path) |>
   zarr_overview()
 ```
 
@@ -1049,18 +1000,17 @@ l2_lfr_measurements %>%
     Compressor: blosc
 
 Similar to the previous example, we can see that all of the arrays are
-of the same shape: Here, we can see that all of the arrays are of the
-same shape: 4091 x 4865. We read in all of the arrays:
+of the same shape: 4091 x 4865. We read in all of the arrays:
 
 ``` r
-gifapar <- l2_lfr_measurements %>%
-  filter(array == "gifapar") %>%
-  pull(path) %>%
+gifapar <- l2_lfr_measurements |>
+  filter(array == "gifapar") |>
+  pull(path) |>
   read_zarr_array()
 
-gifapar_long <- l2_lfr_measurements %>%
-  filter(array == "longitude") %>%
-  pull(path) %>%
+gifapar_long <- l2_lfr_measurements |>
+  filter(array == "longitude") |>
+  pull(path) |>
   read_zarr_array()
 
 gifapar_long[1:5, 1:5]
@@ -1074,9 +1024,9 @@ gifapar_long[1:5, 1:5]
     [5,] -9.246483 -9.242529 -9.238575 -9.234620 -9.230666
 
 ``` r
-gifapar_lat <- l2_lfr_measurements %>%
-  filter(array == "latitude") %>%
-  pull(path) %>%
+gifapar_lat <- l2_lfr_measurements |>
+  filter(array == "latitude") |>
+  pull(path) |>
   read_zarr_array()
 
 gifapar_lat[1:5, 1:5]
@@ -1116,7 +1066,5 @@ Finally, we plot the GIFAPAR:
 ``` r
 plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
-
-    downsample set to 9
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/gifapar-plot-1.png)
