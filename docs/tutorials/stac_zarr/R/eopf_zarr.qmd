@@ -20,11 +20,11 @@ editor_options:
   - [Coordinates](#coordinates)
   - [Different resolutions](#different-resolutions)
 - [Examples](#examples)
-  - [Sentinel 2](#sentinel-2)
+  - [Sentinel-2](#sentinel-2)
     - [NDVI](#ndvi)
     - [RGB Quicklook Composite]{#rgb-quicklook-composite}
-  - [Sentinel 1](#sentinel-1)
-  - [Sentinel 3](#sentinel-3)
+  - [Sentinel-1](#sentinel-1)
+  - [Sentinel-3](#sentinel-3)
   
 # Introduction
 
@@ -271,9 +271,9 @@ b02 |>
 
 The following sections show examples from each of the Sentinel missions.
 
-## Sentinel 1
+## Sentinel-1
 
-The first example looks at [Sentinel 1 Level 2 Ocean (OCN) data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn), which consists of data for oceanographic study, such as monitoring sea surface conditions, detecting oil spills, and studying ocean currents. This example will show how to access and plot Wind Direction data.
+The first example looks at [Sentinel-1 Level 2 Ocean (OCN) data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn), which consists of data for oceanographic study, such as monitoring sea surface conditions, detecting oil spills, and studying ocean currents. This example will show how to access and plot Wind Direction data.
 
 First, select the relevant collection and item from STAC:
 
@@ -392,9 +392,9 @@ Finally, we can plot this object:
 plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
 
-## Sentinel 2
+## Sentinel-2
 
-# NDVI
+#### NDVI
 
 We will calculate the Normalized Difference Vegetation Index (NDVI) for data from the Sentinel-2 mission. This requires both the red (B04) and near-infrared (B08) bands. We will work with these at 20-metre resolution.
 
@@ -410,6 +410,8 @@ We will read in the `B04` band, as well as the `x` and `y` coordinates, using th
 r20m_arrays <- r20m |>
   mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) |>
   filter(array %in% c("b04", "x", "y"))
+
+# TODO -> just do this one by one
 
 r20m_arrays <- split(r20m_arrays, c("b04", "x", "y")) |>
   map(\(x) read_zarr_array(x[["path"]]))
@@ -565,5 +567,112 @@ zarr_store |>
   plotRGB()
 ```
 
+## Sentinel-3
 
-## Sentinel 3
+Finally, we look at an example from the Sentinel-3 mission. The Sentinel-3 mission measures sea-surface topography and land- and sea-surface temperature and colour, in support of environmental and climate monitoring. The [Sentinel-3 OLCI L2 LFR](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-3-olci-l2-lfr?.language=en) product provides this data, computed for full resolution.
+
+Again, we will access a specific item from this collection:
+
+```{r gifapar-item}
+l2_lfr <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-3-olci-l2-lfr") |>
+  items(feature_id = "S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003") |>
+  get_request()
+
+l2_lfr
+```
+
+```{r gifapar-assets}
+l2_lfr |>
+  pluck("assets") |>
+  map("title")
+```
+
+Similarly to the Sentinel-2 example, since we are interested in the "Green Instantaneous FAPAR (GIFAPAR)" data, we will hold onto the `gifapar` key for now.
+
+To access all of the data, we get the "product" asset and then the full Zarr store, again using our helper function to extract array information from the full array path:
+
+```{r gifapar-store}
+l2_lfr_url <- l2_lfr |>
+  assets_select(asset_names = "product") |>
+  assets_url()
+
+l2_lfr_store <- l2_lfr_url |>
+  zarr_overview(as_data_frame = TRUE) |>
+  derive_store_array(l2_lfr_url)
+
+l2_lfr_store
+```
+
+Next, we filter to access measurement data only:
+
+```{r gifapar-measurements}
+l2_lfr_measurements <- l2_lfr_store %>%
+  filter(str_starts(array, "/measurements")) %>%
+  mutate(array = str_remove(array, "/measurements/"))
+
+l2_lfr_measurements
+```
+
+Of these, we are interested in `gifapar` as well as `longitude` and `latitude`. We can get an overview of the arrays’ dimensions and structures:
+
+```{r gifapar-overview}
+l2_lfr_measurements %>%
+  filter(array == "gifapar") %>%
+  pull(path) %>%
+  zarr_overview()
+
+l2_lfr_measurements %>%
+  filter(array == "longitude") %>%
+  pull(path) %>%
+  zarr_overview()
+
+l2_lfr_measurements %>%
+  filter(array == "latitude") %>%
+  pull(path) %>%
+  zarr_overview()
+```
+
+Similar to the previous example, we can see that all of the arrays are of the same shape: 
+Here, we can see that all of the arrays are of the same shape: 4091 x 4865. We read in all of the arrays:
+
+```{r gifapar-read}
+gifapar <- l2_lfr_measurements %>%
+  filter(array == "gifapar") %>%
+  pull(path) %>%
+  read_zarr_array()
+
+gifapar_long <- l2_lfr_measurements %>%
+  filter(array == "longitude") %>%
+  pull(path) %>%
+  read_zarr_array()
+
+gifapar_long[1:5, 1:5]
+
+gifapar_lat <- l2_lfr_measurements %>%
+  filter(array == "latitude") %>%
+  pull(path) %>%
+  read_zarr_array()
+
+gifapar_lat[1:5, 1:5]
+```
+
+Again, both `longitude` and `latitude` are unevenly spaced 2-dimensional arrays. This tells us that the data grid is curvilinear, and we use `st_as_stars()` to get our data into the correct format for visualisation:
+
+```{r gifapar-stars}
+gifapar_stars <- st_as_stars(gifapar = gifapar) |>
+  st_as_stars(curvilinear = list(X1 = gifapar_long, X2 = gifapar_lat))
+
+# TODO, set crs, same in prior example
+
+gifapar_stars
+``` 
+
+TODO -> mention missing data?
+
+Finally, we plot the GIFAPAR:
+
+```{r gifapar-plot}
+plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
+```
+

@@ -13,12 +13,12 @@
     -   [Coordinates](#coordinates)
     -   [Different resolutions](#different-resolutions)
 -   [Examples](#examples)
-    -   [Sentinel 2](#sentinel-2)
+    -   [Sentinel-2](#sentinel-2)
         -   [NDVI](#ndvi)
         -   <span id="rgb-quicklook-composite">RGB Quicklook
             Composite</span>
-    -   [Sentinel 1](#sentinel-1)
-    -   [Sentinel 3](#sentinel-3)
+    -   [Sentinel-1](#sentinel-1)
+    -   [Sentinel-3](#sentinel-3)
 
 # Introduction
 
@@ -448,9 +448,9 @@ b02 |>
 
 The following sections show examples from each of the Sentinel missions.
 
-## Sentinel 1
+## Sentinel-1
 
-The first example looks at [Sentinel 1 Level 2 Ocean (OCN)
+The first example looks at [Sentinel-1 Level 2 Ocean (OCN)
 data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn),
 which consists of data for oceanographic study, such as monitoring sea
 surface conditions, detecting oil spills, and studying ocean currents.
@@ -721,9 +721,9 @@ plot(owi_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colo
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/owi-plot-1.png)
 
-## Sentinel 2
+## Sentinel-2
 
-# NDVI
+#### NDVI
 
 We will calculate the Normalized Difference Vegetation Index (NDVI) for
 data from the Sentinel-2 mission. This requires both the red (B04) and
@@ -761,6 +761,8 @@ list.
 r20m_arrays <- r20m |>
   mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) |>
   filter(array %in% c("b04", "x", "y"))
+
+# TODO -> just do this one by one
 
 r20m_arrays <- split(r20m_arrays, c("b04", "x", "y")) |>
   map(\(x) read_zarr_array(x[["path"]]))
@@ -1020,4 +1022,251 @@ zarr_store |>
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/tci-60m-vis-1.png)
 
-## Sentinel 3
+## Sentinel-3
+
+Finally, we look at an example from the Sentinel-3 mission. The
+Sentinel-3 mission measures sea-surface topography and land- and
+sea-surface temperature and colour, in support of environmental and
+climate monitoring. The [Sentinel-3 OLCI L2
+LFR](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-3-olci-l2-lfr?.language=en)
+product provides this data, computed for full resolution.
+
+Again, we will access a specific item from this collection:
+
+``` r
+l2_lfr <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-3-olci-l2-lfr") |>
+  items(feature_id = "S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003") |>
+  get_request()
+
+l2_lfr
+```
+
+    ###Item
+    - id: 
+    S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003
+    - collection: sentinel-3-olci-l2-lfr
+    - bbox: xmin: -10.86330, ymin: 39.54440, xmax: 9.13909, ymax: 52.45360
+    - datetime: 2025-06-05T10:24:30.251369Z
+    - assets: 
+    iwv, lagp, lqsf, otci, rc681, rc865, gifapar, product, product_metadata
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+``` r
+l2_lfr |>
+  pluck("assets") |>
+  map("title")
+```
+
+    $iwv
+    [1] "Integrated Water Vapour Column"
+
+    $lagp
+    [1] "Land and atmospheric geophysical products"
+
+    $lqsf
+    [1] "Land Quality and Science Flags"
+
+    $otci
+    [1] "OLCI Terrestrial Chlorophyll Index"
+
+    $rc681
+    [1] "Green Instantaneous FAPAR (GIFAPAR) - Rectified Reflectance - red channel"
+
+    $rc865
+    [1] "Green Instantaneous FAPAR (GIFAPAR) - Rectified Reflectance - NIR channel"
+
+    $gifapar
+    [1] "Green Instantaneous FAPAR (GIFAPAR)"
+
+    $product
+    [1] "EOPF Product"
+
+    $product_metadata
+    [1] "Consolidated Metadata"
+
+Similarly to the Sentinel-2 example, since we are interested in the
+“Green Instantaneous FAPAR (GIFAPAR)” data, we will hold onto the
+`gifapar` key for now.
+
+To access all of the data, we get the “product” asset and then the full
+Zarr store, again using our helper function to extract array information
+from the full array path:
+
+``` r
+l2_lfr_url <- l2_lfr |>
+  assets_select(asset_names = "product") |>
+  assets_url()
+
+l2_lfr_store <- l2_lfr_url |>
+  zarr_overview(as_data_frame = TRUE) |>
+  derive_store_array(l2_lfr_url)
+
+l2_lfr_store
+```
+
+    # A tibble: 38 × 7
+       array                      path  nchunks data_type compressor dim   chunk_dim
+       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
+     1 /conditions/geometry/lati… http…       1 float64   blosc      <int> <int [2]>
+     2 /conditions/geometry/long… http…       1 float64   blosc      <int> <int [2]>
+     3 /conditions/geometry/oaa   http…       1 float64   blosc      <int> <int [2]>
+     4 /conditions/geometry/oza   http…       1 float64   blosc      <int> <int [2]>
+     5 /conditions/geometry/saa   http…       1 float64   blosc      <int> <int [2]>
+     6 /conditions/geometry/sza   http…       1 float64   blosc      <int> <int [2]>
+     7 /conditions/image/altitude http…      20 float32   blosc      <int> <int [2]>
+     8 /conditions/image/detecto… http…      20 float32   blosc      <int> <int [2]>
+     9 /conditions/image/frame_o… http…      20 float32   blosc      <int> <int [2]>
+    10 /conditions/image/latitude http…      20 float64   blosc      <int> <int [2]>
+    # ℹ 28 more rows
+
+Next, we filter to access measurement data only:
+
+``` r
+l2_lfr_measurements <- l2_lfr_store %>%
+  filter(str_starts(array, "/measurements")) %>%
+  mutate(array = str_remove(array, "/measurements/"))
+
+l2_lfr_measurements
+```
+
+    # A tibble: 7 × 7
+      array     path                    nchunks data_type compressor dim   chunk_dim
+      <chr>     <chr>                     <dbl> <chr>     <chr>      <lis> <list>   
+    1 gifapar   https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
+    2 iwv       https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
+    3 latitude  https://objects.eodc.e…      20 float64   blosc      <int> <int [2]>
+    4 longitude https://objects.eodc.e…      20 float64   blosc      <int> <int [2]>
+    5 otci      https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
+    6 rc681     https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
+    7 rc865     https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
+
+Of these, we are interested in `gifapar` as well as `longitude` and
+`latitude`. We can get an overview of the arrays’ dimensions and
+structures:
+
+``` r
+l2_lfr_measurements %>%
+  filter(array == "gifapar") %>%
+  pull(path) %>%
+  zarr_overview()
+```
+
+    Type: Array
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/gifapar/
+    Shape: 4091 x 4865
+    Chunk Shape: 1024 x 1024
+    No. of Chunks: 20 (4 x 5)
+    Data Type: float32
+    Endianness: little
+    Compressor: blosc
+
+``` r
+l2_lfr_measurements %>%
+  filter(array == "longitude") %>%
+  pull(path) %>%
+  zarr_overview()
+```
+
+    Type: Array
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/longitude/
+    Shape: 4091 x 4865
+    Chunk Shape: 1024 x 1024
+    No. of Chunks: 20 (4 x 5)
+    Data Type: float64
+    Endianness: little
+    Compressor: blosc
+
+``` r
+l2_lfr_measurements %>%
+  filter(array == "latitude") %>%
+  pull(path) %>%
+  zarr_overview()
+```
+
+    Type: Array
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/latitude/
+    Shape: 4091 x 4865
+    Chunk Shape: 1024 x 1024
+    No. of Chunks: 20 (4 x 5)
+    Data Type: float64
+    Endianness: little
+    Compressor: blosc
+
+Similar to the previous example, we can see that all of the arrays are
+of the same shape: Here, we can see that all of the arrays are of the
+same shape: 4091 x 4865. We read in all of the arrays:
+
+``` r
+gifapar <- l2_lfr_measurements %>%
+  filter(array == "gifapar") %>%
+  pull(path) %>%
+  read_zarr_array()
+
+gifapar_long <- l2_lfr_measurements %>%
+  filter(array == "longitude") %>%
+  pull(path) %>%
+  read_zarr_array()
+
+gifapar_long[1:5, 1:5]
+```
+
+              [,1]      [,2]      [,3]      [,4]      [,5]
+    [1,] -9.244943 -9.240988 -9.237033 -9.233078 -9.229123
+    [2,] -9.245328 -9.241373 -9.237418 -9.233464 -9.229509
+    [3,] -9.245713 -9.241758 -9.237804 -9.233849 -9.229895
+    [4,] -9.246098 -9.242143 -9.238189 -9.234235 -9.230281
+    [5,] -9.246483 -9.242529 -9.238575 -9.234620 -9.230666
+
+``` r
+gifapar_lat <- l2_lfr_measurements %>%
+  filter(array == "latitude") %>%
+  pull(path) %>%
+  read_zarr_array()
+
+gifapar_lat[1:5, 1:5]
+```
+
+             [,1]     [,2]     [,3]     [,4]     [,5]
+    [1,] 52.45365 52.45342 52.45320 52.45298 52.45276
+    [2,] 52.45109 52.45087 52.45064 52.45042 52.45020
+    [3,] 52.44853 52.44831 52.44808 52.44786 52.44764
+    [4,] 52.44597 52.44575 52.44553 52.44530 52.44508
+    [5,] 52.44341 52.44319 52.44297 52.44274 52.44252
+
+Again, both `longitude` and `latitude` are unevenly spaced 2-dimensional
+arrays. This tells us that the data grid is curvilinear, and we use
+`st_as_stars()` to get our data into the correct format for
+visualisation:
+
+``` r
+gifapar_stars <- st_as_stars(gifapar = gifapar) |>
+  st_as_stars(curvilinear = list(X1 = gifapar_long, X2 = gifapar_lat))
+
+# TODO, set crs, same in prior example
+
+gifapar_stars
+```
+
+    stars object with 2 dimensions and 1 attribute
+    attribute(s), summary of first 1e+05 cells:
+             Min. 1st Qu. Median Mean 3rd Qu. Max.  NA's
+    gifapar    NA      NA     NA  NaN      NA   NA 1e+05
+    dimension(s):
+       from   to         refsys point                       values x/y
+    X1    1 4091 WGS 84 (CRS84) FALSE [4091x4865] -10.86,...,9.139 [x]
+    X2    1 4865 WGS 84 (CRS84) FALSE  [4091x4865] 39.54,...,52.45 [y]
+    curvilinear grid
+
+TODO -\> mention missing data?
+
+Finally, we plot the GIFAPAR:
+
+``` r
+plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
+```
+
+    downsample set to 9
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/gifapar-plot-1.png)
