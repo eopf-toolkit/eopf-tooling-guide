@@ -760,7 +760,7 @@ list.
 ``` r
 r20m_arrays <- r20m |>
   mutate(array = str_remove(array, "/measurements/reflectance/r20m/")) |>
-  filter(array %in% c("b04", "x", "y")) 
+  filter(array %in% c("b04", "x", "y"))
 
 r20m_arrays <- split(r20m_arrays, c("b04", "x", "y")) |>
   map(\(x) read_zarr_array(x[["path"]]))
@@ -781,8 +781,8 @@ dim(r10m_b08)
     [1] 10980 10980
 
 And then use `terra`’s `aggregate()` to aggregate it up to 20-metre
-resolution. This reduces the dimension of the B08 band to be 50 x 50,
-matching the other 20-metre resolution bands.
+resolution. This reduces the dimension of the B08 band to be 5490 x
+5490, matching the other 20-metre resolution bands.
 
 ``` r
 r20m_b08 <- r10m_b08 |>
@@ -811,60 +811,55 @@ r20m_b08 <- as.array(r20m_b08)[, , 1]
 
 For NDVI, we need to calculate `sum_bands`, which is the sum of the
 Near-Infrared (B08) and Red bands (B04), and `diff_bands`, which is
-their difference. First, we will combine all of the arrays into a
-`stars` object, which allows us to do easy data manipulation on it. To
-create this object, we name the arrays specifically, and then set `x`
-and `y` as dimensions.
+their difference.
 
 ``` r
-ndvi_data <- st_as_stars(
-  b04 = r20m_arrays[["b04"]], b08 = r20m_b08
-) |>
-  st_set_dimensions("X1", r20m_arrays[["x"]], names = "x") |>
-  st_set_dimensions("X2", r20m_arrays[["y"]], names = "y")
-
-ndvi_data
-```
-
-    stars object with 2 dimensions and 2 attributes
-    attribute(s), summary of first 1e+05 cells:
-           Min. 1st Qu.  Median     Mean 3rd Qu.  Max.
-    b04  1035.0  1309.0 1629.00 2296.687    2211 14363
-    b08   874.5  3689.5 4449.75 4653.465    5414 12868
-    dimension(s):
-      from   to  offset delta point x/y
-    x    1 5490  600010    20 FALSE [x]
-    y    1 5490 5300030   -20 FALSE [y]
-
-This is a useful format that shows us summary statistics on each array.
-More than that, we can now use `tidyverse`-style data operations, such
-as `mutate()` to derive new variables:
-
-``` r
-ndvi_data <- ndvi_data |>
-  mutate(
-    sum_bands = b08 + b04,
-    diff_bands = b08 - b04
-  )
+sum_bands <- r20m_b08 + r20m_arrays[["b04"]]
+diff_bands <- r20m_b08 - r20m_arrays[["b04"]]
 ```
 
 Then, we can derive the `ndvi` (`diff_bands` / `sum_bands`), handling
-any cases where `sum_bands` is 0 by setting the NDVI to 0:
+any cases where `sum_bands` is 0 (causing `ndvi` to be `NAN`) by setting
+the NDVI to 0:
 
 ``` r
-ndvi_data <- ndvi_data |>
-  mutate(ndvi = ifelse(sum_bands != 0, diff_bands / sum_bands, 0))
+ndvi <- diff_bands / sum_bands
+ndvi <- ifelse(is.nan(ndvi), 0, ndvi)
 ```
 
-Then, we can visualise the NDVI:
+Then, we make the new array into a raster object:
 
 ``` r
-plot(ndvi_data, axes = TRUE, main = "Normalized Difference Vegetation Index (NDVI)")
+ndvi_rast <- rast(
+  ncol = ncol(ndvi), nrow = nrow(ndvi), 
+  crs = item[["properties"]][["proj:code"]],
+  xmin = min(r20m_arrays[["x"]]), xmax = max(r20m_arrays[["x"]]),
+  ymin = min(r20m_arrays[["y"]]), ymax = max(r20m_arrays[["y"]]),
+)
+
+values(ndvi_rast) <- ndvi
+
+ndvi_rast
 ```
 
-    downsample set to 11
+    class       : SpatRaster 
+    size        : 5490, 5490, 1  (nrow, ncol, nlyr)
+    resolution  : 19.99636, 19.99636  (x, y)
+    extent      : 600010, 709790, 5190250, 5300030  (xmin, xmax, ymin, ymax)
+    coord. ref. : WGS 84 / UTM zone 32N (EPSG:32632) 
+    source(s)   : memory
+    name        : lyr.1 
+    min value   :    -1 
+    max value   :     1 
 
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/ndvi-plot-1.png)
+And visualise it:
+
+``` r
+ndvi_rast |>
+  plot(axes = TRUE, main = "Normalized Difference Vegetation Index (NDVI)", col = hcl.colors(100, "RdYlGn"))
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/ndvi-vis-1.png)
 
 ### RGB Quicklook Composite
 
