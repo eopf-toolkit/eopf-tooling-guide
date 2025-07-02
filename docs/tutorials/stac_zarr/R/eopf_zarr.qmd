@@ -7,6 +7,11 @@ execute:
   cache: true
 editor_options: 
   chunk_output_type: console
+jupyter:
+    kernelspec:
+        name: "ir43"
+        language: "R"
+        display_name: "R 4.3.2"
 ---
 
 # Table of Contents
@@ -137,9 +142,9 @@ derive_store_array <- function(store, product_url) {
     relocate(array, .before = path)
 }
 
-zarr_store <- product_url |>
+zarr_store <- s2_l2a_product_url |>
   zarr_overview(as_data_frame = TRUE) |>
-  derive_store_array(product_url)
+  derive_store_array(s2_l2a_product_url)
 
 zarr_store
 ```
@@ -562,3 +567,54 @@ Finally, we plot the GIFAPAR:
 plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
 
+# SAFE vs Zarr
+
+```{r dl-safe}
+item <- stac("https://catalogue.dataspace.copernicus.eu/stac/") %>%
+  collections(collection_id = "SENTINEL-2") |>
+  items(feature_id = "S2A_MSIL2A_20250605T104701_N0511_R051_T35WMU_20250605T125416.SAFE") |>
+  get_request()
+
+item_id <- item[["id"]]
+
+asset_url <- item |>
+  assets_select(asset_names = "PRODUCT") |>
+  assets_url()
+
+asset_url <- stringr::str_replace(asset_url, "\\$value", glue::glue("{item_id}.zip"))
+
+asset <- item |>
+  assets_select(asset_names = "PRODUCT")
+
+# Update asset URL
+
+# asset$assets$PRODUCT$href <- asset_url
+
+
+httr2::request(asset$assets$PRODUCT$href) |>
+  httr2::req_auth_bearer_token(token$access_token) %>%
+  httr2::req_perform()
+
+httr2::request(asset$assets$PRODUCT$href) |>
+  req_oauth_auth_code(
+    client = token,
+    auth_url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
+  ) |>
+  req_perform()
+
+
+
+token <- httr2::oauth_flow_client_credentials(
+  client =
+    httr2::oauth_client(id = Sys.getenv("CDSE_USERNAME"), "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
+  secret = Sys.getenv("CDSE_PASSWORD")
+  )
+)
+
+GET(asset$assets$PRODUCT$href, 
+    )
+
+assets_download(
+  asset,
+  config = add_headers(Authorization = paste("Bearer", token$access_token, sep = " ")))
+```

@@ -146,8 +146,6 @@ s2_l2a_product_url <- s2_l2a_product |>
 s2_l2a_product_url
 ```
 
-    [1] "https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr"
-
 The product is the “top level” Zarr asset, which contains the full Zarr
 product hierarchy. We can use `zarr_overview()` to get an overview of
 it, setting `as_data_frame` to `TRUE` so that we can see the entries in
@@ -164,27 +162,12 @@ derive_store_array <- function(store, product_url) {
     relocate(array, .before = path)
 }
 
-zarr_store <- product_url |>
+zarr_store <- s2_l2a_product_url |>
   zarr_overview(as_data_frame = TRUE) |>
-  derive_store_array(product_url)
+  derive_store_array(s2_l2a_product_url)
 
 zarr_store
 ```
-
-    # A tibble: 149 × 7
-       array                      path  nchunks data_type compressor dim   chunk_dim
-       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-     1 /conditions/geometry/angle http…       1 unicode2… blosc      <int> <int [1]>
-     2 /conditions/geometry/band  http…       1 unicode96 blosc      <int> <int [1]>
-     3 /conditions/geometry/dete… http…       1 int64     blosc      <int> <int [1]>
-     4 /conditions/geometry/mean… http…       1 float64   blosc      <int> <int [1]>
-     5 /conditions/geometry/mean… http…       1 float64   blosc      <int> <int [2]>
-     6 /conditions/geometry/sun_… http…       1 float64   blosc      <int> <int [3]>
-     7 /conditions/geometry/view… http…       4 float64   blosc      <int> <int [5]>
-     8 /conditions/geometry/x     http…       1 int64     blosc      <int> <int [1]>
-     9 /conditions/geometry/y     http…       1 int64     blosc      <int> <int [1]>
-    10 /conditions/mask/detector… http…      36 uint8     blosc      <int> <int [2]>
-    # ℹ 139 more rows
 
 This shows us the path to access the Zarr array, the number of chunks it
 contains, the type of data, as well as its dimensions and chunking
@@ -200,22 +183,6 @@ r20m <- zarr_store |>
 r20m
 ```
 
-    # A tibble: 12 × 7
-       array                      path  nchunks data_type compressor dim   chunk_dim
-       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-     1 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     2 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     3 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     4 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     5 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     6 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     7 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     8 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     9 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-    10 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-    11 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
-    12 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
-
 Then, we select the B02 array and examine its dimensions and chuning:
 
 ``` r
@@ -224,21 +191,6 @@ r20m |>
   select(path, nchunks, dim, chunk_dim) |>
   as.list()
 ```
-
-    $path
-    [1] "https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/b02"
-
-    $nchunks
-    [1] 36
-
-    $dim
-    $dim[[1]]
-    [1] 5490 5490
-
-
-    $chunk_dim
-    $chunk_dim[[1]]
-    [1] 915 915
 
 We can also see an overview of individual arrays using
 `zarr_overview()`. With the default setting (where `as_data_frame` is
@@ -253,15 +205,6 @@ r20m_b02 <- r20m |>
 r20m_b02 |>
   zarr_overview()
 ```
-
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/b02/
-    Shape: 5490 x 5490
-    Chunk Shape: 915 x 915
-    No. of Chunks: 36 (6 x 6)
-    Data Type: uint16
-    Endianness: little
-    Compressor: blosc
 
 The above overview tells us that the data is two-dimensional, with
 dimensions 5490 x 5490. Zarr data is split up into **chunks**, which are
@@ -283,18 +226,6 @@ r20m_b02 |>
   read_zarr_array(index = list(1:10, 1:5))
 ```
 
-          [,1] [,2] [,3] [,4] [,5]
-     [1,] 1156 1134 1142 1137 1141
-     [2,] 1210 1178 1246 1165 1143
-     [3,] 1134 1167 1195 1164 1139
-     [4,] 1158 1136 1133 1130 1128
-     [5,] 1141 1131 1127 1153 1143
-     [6,] 1167 1141 1143 1141 1187
-     [7,] 1173 1140 1126 1131 1267
-     [8,] 1146 1141 1129 1187 1321
-     [9,] 1138 1151 1149 1312 1340
-    [10,] 1152 1157 1227 1393 1340
-
 ## Coordinates
 
 Similarly, we can read in the `x` and `y` coordinates corresponding to
@@ -309,8 +240,6 @@ UTM zone’s origin.
 s2_l2a_item[["properties"]][["proj:code"]]
 ```
 
-    [1] "EPSG:32632"
-
 We can see that `x` and `y` are one dimensional:
 
 ``` r
@@ -320,18 +249,7 @@ r20m_x <- r20m |>
 
 r20m_x |>
   zarr_overview()
-```
 
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/x/
-    Shape: 5490
-    Chunk Shape: 5490
-    No. of Chunks: 1 (1)
-    Data Type: int64
-    Endianness: little
-    Compressor: blosc
-
-``` r
 r20m_y <- r20m |>
   filter(str_ends(array, "y")) |>
   pull(path)
@@ -339,15 +257,6 @@ r20m_y <- r20m |>
 r20m_y |>
   zarr_overview()
 ```
-
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/y/
-    Shape: 5490
-    Chunk Shape: 5490
-    No. of Chunks: 1 (1)
-    Data Type: int64
-    Endianness: little
-    Compressor: blosc
 
 Which means that, when combined, they form a grid that describes the
 location of each point in the 2-dimensional measurements, such as B02.
@@ -362,8 +271,6 @@ r20m_x |>
   read_zarr_array(list(1:5))
 ```
 
-    [1] 600010 600030 600050 600070 600090
-
 Or, we can read in the whole array (by not providing any elements to
 `index`) and view its first few values with `head()`. Of course, reading
 in the whole array, rather than a small section of it, will take longer.
@@ -372,17 +279,11 @@ in the whole array, rather than a small section of it, will take longer.
 r20m_x |>
   read_zarr_array() |>
   head(5)
-```
 
-    [1] 600010 600030 600050 600070 600090
-
-``` r
 r20m_y |>
   read_zarr_array() |>
   head(5)
 ```
-
-    [1] 5300030 5300010 5299990 5299970 5299950
 
 ## Different resolutions
 
@@ -398,13 +299,6 @@ b02 |>
   select(array)
 ```
 
-    # A tibble: 3 × 1
-      array                             
-      <chr>                             
-    1 /measurements/reflectance/r10m/b02
-    2 /measurements/reflectance/r20m/b02
-    3 /measurements/reflectance/r60m/b02
-
 The resolution affects the dimensions of the data: when measurements are
 taken at a higher resolution, there will be more data. We can see here
 that there is more data for the 10m resolution than the 20m resolution
@@ -415,19 +309,11 @@ resolution:
 b02 |>
   filter(array == "/measurements/reflectance/r10m/b02") |>
   pull(dim)
-```
 
-    [[1]]
-    [1] 10980 10980
-
-``` r
 b02 |>
   filter(array == "/measurements/reflectance/r60m/b02") |>
   pull(dim)
 ```
-
-    [[1]]
-    [1] 1830 1830
 
 # Examples
 
@@ -452,15 +338,6 @@ l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") |>
 l2_ocn
 ```
 
-    ###Item
-    - id: S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971
-    - collection: sentinel-1-l2-ocn
-    - bbox: xmin: -25.77445, ymin: 30.25712, xmax: -22.82115, ymax: 32.16941
-    - datetime: 2025-06-04T19:39:23.099186Z
-    - assets: osw, owi, rvl, product, product_metadata
-    - item's fields: 
-    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
-
 We can look at each of the assets’ titles to understand what the item
 contains:
 
@@ -469,21 +346,6 @@ l2_ocn |>
   pluck("assets") |>
   map("title")
 ```
-
-    $osw
-    [1] "Ocean Swell spectra"
-
-    $owi
-    [1] "Ocean Wind field"
-
-    $rvl
-    [1] "Surface Radial Velocity"
-
-    $product
-    [1] "EOPF Product"
-
-    $product_metadata
-    [1] "Consolidated Metadata"
 
 We are interested in the “Ocean Wind field” data, and will hold onto the
 `owi` key for now.
@@ -504,35 +366,12 @@ l2_ocn_store <- l2_ocn_url |>
 l2_ocn_store
 ```
 
-    # A tibble: 114 × 7
-       array                      path  nchunks data_type compressor dim   chunk_dim
-       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-     1 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [3]>
-     2 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     3 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     4 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     5 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     6 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     7 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [5]>
-     8 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [5]>
-     9 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [3]>
-    10 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [3]>
-    # ℹ 104 more rows
-
 Next, we filter to access `owi` measurement data only:
 
 ``` r
 l2_ocn_store |>
   filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
 ```
-
-    # A tibble: 4 × 7
-      array                       path  nchunks data_type compressor dim   chunk_dim
-      <chr>                       <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-    1 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
-    2 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
-    3 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
-    4 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
 
 Since all of these arrays start with
 `/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/`,
@@ -546,14 +385,6 @@ owi <- l2_ocn_store |>
 owi
 ```
 
-    # A tibble: 4 × 7
-      array          path               nchunks data_type compressor dim   chunk_dim
-      <chr>          <chr>                <dbl> <chr>     <chr>      <lis> <list>   
-    1 latitude       https://objects.e…       1 float32   blosc      <int> <int [2]>
-    2 longitude      https://objects.e…       1 float32   blosc      <int> <int [2]>
-    3 wind_direction https://objects.e…       1 float32   blosc      <int> <int [2]>
-    4 wind_speed     https://objects.e…       1 float32   blosc      <int> <int [2]>
-
 We are interested in `wind_direction`, as well as the coordinate arrays
 (`latitude` and `longitude`). We can get an overview of the arrays’
 dimensions and structures:
@@ -563,48 +394,17 @@ owi |>
   filter(array == "wind_direction") |>
   pull(path) |>
   zarr_overview()
-```
 
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s01siwocn/04/products/cpm_v256/S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971.zarr/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/wind_direction/
-    Shape: 167 x 255
-    Chunk Shape: 167 x 255
-    No. of Chunks: 1 (1 x 1)
-    Data Type: float32
-    Endianness: little
-    Compressor: blosc
-
-``` r
 owi |>
   filter(array == "latitude") |>
   pull(path) |>
   zarr_overview()
-```
 
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s01siwocn/04/products/cpm_v256/S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971.zarr/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/latitude/
-    Shape: 167 x 255
-    Chunk Shape: 167 x 255
-    No. of Chunks: 1 (1 x 1)
-    Data Type: float32
-    Endianness: little
-    Compressor: blosc
-
-``` r
 owi |>
   filter(array == "longitude") |>
   pull(path) |>
   zarr_overview()
 ```
-
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s01siwocn/04/products/cpm_v256/S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971.zarr/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/longitude/
-    Shape: 167 x 255
-    Chunk Shape: 167 x 255
-    No. of Chunks: 1 (1 x 1)
-    Data Type: float32
-    Endianness: little
-    Compressor: blosc
 
 Here, we can see that all of the arrays are of the same shape: 167 x
 255, with only one chunk. Since these are small, we can read all of the
@@ -617,32 +417,14 @@ owi_wind_direction <- owi |>
   read_zarr_array()
 
 owi_wind_direction[1:5, 1:5]
-```
 
-             [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 87.10201 85.10722 80.11242 87.11762 80.12283
-    [2,] 87.10078 87.10600 88.11120 83.11641 86.12161
-    [3,] 89.09956 81.10477 82.10999 88.11519 88.12040
-    [4,] 87.09834 83.10355 84.10876 82.11398 81.11919
-    [5,] 83.09712 88.10233 83.10755 86.11276 85.11797
-
-``` r
 owi_lat <- owi |>
   filter(array == "latitude") |>
   pull(path) |>
   read_zarr_array()
 
 owi_lat[1:5, 1:5]
-```
 
-             [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 30.26237 30.26406 30.26576 30.26746 30.26917
-    [2,] 30.27138 30.27308 30.27478 30.27648 30.27818
-    [3,] 30.28039 30.28209 30.28379 30.28549 30.28719
-    [4,] 30.28940 30.29110 30.29280 30.29450 30.29620
-    [5,] 30.29842 30.30012 30.30182 30.30351 30.30521
-
-``` r
 owi_long <- owi |>
   filter(array == "longitude") |>
   pull(path) |>
@@ -650,13 +432,6 @@ owi_long <- owi |>
 
 owi_lat[1:5, 1:5]
 ```
-
-             [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 30.26237 30.26406 30.26576 30.26746 30.26917
-    [2,] 30.27138 30.27308 30.27478 30.27648 30.27818
-    [3,] 30.28039 30.28209 30.28379 30.28549 30.28719
-    [4,] 30.28940 30.29110 30.29280 30.29450 30.29620
-    [5,] 30.29842 30.30012 30.30182 30.30351 30.30521
 
 Note that both `longitude` and `latitude` are 2-dimensional arrays, and
 they are not evenly spaced. Rather, the data grid is **curvilinear** —
@@ -685,23 +460,11 @@ information such as the median and mean `wind_direction`, the number of
 owi_stars
 ```
 
-    stars object with 2 dimensions and 1 attribute
-    attribute(s):
-                        Min. 1st Qu.   Median     Mean  3rd Qu.     Max. NA's
-    wind_direction  33.29902 57.9872 66.76632 65.45217 73.04303 91.13456  430
-    dimension(s):
-       from  to         refsys point                      values x/y
-    X1    1 167 WGS 84 (CRS84) FALSE [167x255] -25.77,...,-22.83 [x]
-    X2    1 255 WGS 84 (CRS84) FALSE   [167x255] 30.26,...,32.16 [y]
-    curvilinear grid
-
 Finally, we can plot this object:
 
 ``` r
 plot(owi_stars, main = "Wind Direction", as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
-
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/owi-plot-1.png)
 
 ## Sentinel-2
 
@@ -721,15 +484,6 @@ tci_10m_url |>
   zarr_overview()
 ```
 
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/quality/l2a_quicklook/r10m/tci/
-    Shape: 3 x 10980 x 10980
-    Chunk Shape: 1 x 1830 x 1830
-    No. of Chunks: 108 (3 x 6 x 6)
-    Data Type: uint8
-    Endianness: NA
-    Compressor: blosc
-
 From the overview, we can see that the quicklook array has three
 dimensions to it, each of size 10980 x 10980. The three dimensions
 correspond to red, green, and blue spectral bands (B04, B03, and B02,
@@ -740,13 +494,6 @@ available by looking at the assets’ bands:
 s2_l2a_item[["assets"]][["TCI_10m"]][["bands"]] |>
   map_dfr(as_tibble)
 ```
-
-    # A tibble: 3 × 5
-      name  common_name description    center_wavelength full_width_half_max
-      <chr> <chr>       <chr>                      <dbl>               <dbl>
-    1 B04   red         Red (band 4)               0.665               0.038
-    2 B03   green       Green (band 3)             0.56                0.045
-    3 B02   blue        Blue (band 2)              0.49                0.098
 
 We can read in a small chunk of the array to get an idea of its shape,
 using the same indexing process we’ve used before. Note that we want to
@@ -763,28 +510,12 @@ tci_10m_preview <- tci_10m_url |>
 tci_10m_preview
 ```
 
-    , , 1
-
-         [,1] [,2]
-    [1,]   16   20
-    [2,]   31   34
-    [3,]   15   19
-
-    , , 2
-
-         [,1] [,2]
-    [1,]   16   18
-    [2,]   30   34
-    [3,]   13   20
-
 For visualisation purposes, we need the data in a different
 configuration — note the dimensions of the data:
 
 ``` r
 dim(tci_10m_preview)
 ```
-
-    [1] 3 2 2
 
 Instead, we need to get it into e.g. 2 x 2 x 3, with the *third*
 dimension reflecting the number of bands (or layers) To do this, we use
@@ -798,31 +529,9 @@ tci_10m_preview_perm <- tci_10m_preview |>
   aperm(c(2, 3, 1))
 
 tci_10m_preview_perm
-```
 
-    , , 1
-
-         [,1] [,2]
-    [1,]   16   16
-    [2,]   20   18
-
-    , , 2
-
-         [,1] [,2]
-    [1,]   31   30
-    [2,]   34   34
-
-    , , 3
-
-         [,1] [,2]
-    [1,]   15   13
-    [2,]   19   20
-
-``` r
 dim(tci_10m_preview_perm)
 ```
-
-    [1] 2 2 3
 
 Let’s read in the full TCI array to visualise it.
 
@@ -836,8 +545,6 @@ tci_10m_perm <- tci_10m |>
 dim(tci_10m)
 ```
 
-    [1]     3 10980 10980
-
 For visualisation, we use `terra`’s `plotRGB()` function, first
 converting the array into a raster object with `rast()`:
 
@@ -846,8 +553,6 @@ tci_10m_perm |>
   rast() |>
   plotRGB()
 ```
-
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/tci-10m-vis-1.png)
 
 We can do the same with the quicklook at the 60-metre resolution,
 showing the full visualisation process in a single step:
@@ -861,8 +566,6 @@ zarr_store |>
   rast() |>
   plotRGB()
 ```
-
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/tci-60m-vis-1.png)
 
 ## Sentinel-3
 
@@ -884,17 +587,6 @@ l2_lfr <- stac("https://stac.core.eopf.eodc.eu/") |>
 l2_lfr
 ```
 
-    ###Item
-    - id: 
-    S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003
-    - collection: sentinel-3-olci-l2-lfr
-    - bbox: xmin: -10.86330, ymin: 39.54440, xmax: 9.13909, ymax: 52.45360
-    - datetime: 2025-06-05T10:24:30.251369Z
-    - assets: 
-    iwv, lagp, lqsf, otci, rc681, rc865, gifapar, product, product_metadata
-    - item's fields: 
-    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
-
 To access all of the data, we get the “product” asset and then the full
 Zarr store, again using our helper function to extract array information
 from the full array path:
@@ -911,21 +603,6 @@ l2_lfr_store <- l2_lfr_url |>
 l2_lfr_store
 ```
 
-    # A tibble: 38 × 7
-       array                      path  nchunks data_type compressor dim   chunk_dim
-       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-     1 /conditions/geometry/lati… http…       1 float64   blosc      <int> <int [2]>
-     2 /conditions/geometry/long… http…       1 float64   blosc      <int> <int [2]>
-     3 /conditions/geometry/oaa   http…       1 float64   blosc      <int> <int [2]>
-     4 /conditions/geometry/oza   http…       1 float64   blosc      <int> <int [2]>
-     5 /conditions/geometry/saa   http…       1 float64   blosc      <int> <int [2]>
-     6 /conditions/geometry/sza   http…       1 float64   blosc      <int> <int [2]>
-     7 /conditions/image/altitude http…      20 float32   blosc      <int> <int [2]>
-     8 /conditions/image/detecto… http…      20 float32   blosc      <int> <int [2]>
-     9 /conditions/image/frame_o… http…      20 float32   blosc      <int> <int [2]>
-    10 /conditions/image/latitude http…      20 float64   blosc      <int> <int [2]>
-    # ℹ 28 more rows
-
 Next, we filter to access measurement data only:
 
 ``` r
@@ -936,17 +613,6 @@ l2_lfr_measurements <- l2_lfr_store |>
 l2_lfr_measurements
 ```
 
-    # A tibble: 7 × 7
-      array     path                    nchunks data_type compressor dim   chunk_dim
-      <chr>     <chr>                     <dbl> <chr>     <chr>      <lis> <list>   
-    1 gifapar   https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
-    2 iwv       https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
-    3 latitude  https://objects.eodc.e…      20 float64   blosc      <int> <int [2]>
-    4 longitude https://objects.eodc.e…      20 float64   blosc      <int> <int [2]>
-    5 otci      https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
-    6 rc681     https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
-    7 rc865     https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
-
 Of these, we are interested in `gifapar` as well as `longitude` and
 `latitude`. We can get an overview of the arrays’ dimensions and
 structures:
@@ -956,48 +622,17 @@ l2_lfr_measurements |>
   filter(array == "gifapar") |>
   pull(path) |>
   zarr_overview()
-```
 
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/gifapar/
-    Shape: 4091 x 4865
-    Chunk Shape: 1024 x 1024
-    No. of Chunks: 20 (4 x 5)
-    Data Type: float32
-    Endianness: little
-    Compressor: blosc
-
-``` r
 l2_lfr_measurements |>
   filter(array == "longitude") |>
   pull(path) |>
   zarr_overview()
-```
 
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/longitude/
-    Shape: 4091 x 4865
-    Chunk Shape: 1024 x 1024
-    No. of Chunks: 20 (4 x 5)
-    Data Type: float64
-    Endianness: little
-    Compressor: blosc
-
-``` r
 l2_lfr_measurements |>
   filter(array == "latitude") |>
   pull(path) |>
   zarr_overview()
 ```
-
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/latitude/
-    Shape: 4091 x 4865
-    Chunk Shape: 1024 x 1024
-    No. of Chunks: 20 (4 x 5)
-    Data Type: float64
-    Endianness: little
-    Compressor: blosc
 
 Similar to the previous example, we can see that all of the arrays are
 of the same shape: 4091 x 4865. We read in all of the arrays:
@@ -1014,16 +649,7 @@ gifapar_long <- l2_lfr_measurements |>
   read_zarr_array()
 
 gifapar_long[1:5, 1:5]
-```
 
-              [,1]      [,2]      [,3]      [,4]      [,5]
-    [1,] -9.244943 -9.240988 -9.237033 -9.233078 -9.229123
-    [2,] -9.245328 -9.241373 -9.237418 -9.233464 -9.229509
-    [3,] -9.245713 -9.241758 -9.237804 -9.233849 -9.229895
-    [4,] -9.246098 -9.242143 -9.238189 -9.234235 -9.230281
-    [5,] -9.246483 -9.242529 -9.238575 -9.234620 -9.230666
-
-``` r
 gifapar_lat <- l2_lfr_measurements |>
   filter(array == "latitude") |>
   pull(path) |>
@@ -1031,13 +657,6 @@ gifapar_lat <- l2_lfr_measurements |>
 
 gifapar_lat[1:5, 1:5]
 ```
-
-             [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 52.45365 52.45342 52.45320 52.45298 52.45276
-    [2,] 52.45109 52.45087 52.45064 52.45042 52.45020
-    [3,] 52.44853 52.44831 52.44808 52.44786 52.44764
-    [4,] 52.44597 52.44575 52.44553 52.44530 52.44508
-    [5,] 52.44341 52.44319 52.44297 52.44274 52.44252
 
 Again, both `longitude` and `latitude` are unevenly spaced 2-dimensional
 arrays. This tells us that the data grid is curvilinear, and we use
@@ -1051,20 +670,8 @@ gifapar_stars <- st_as_stars(gifapar = gifapar) |>
 gifapar_stars
 ```
 
-    stars object with 2 dimensions and 1 attribute
-    attribute(s), summary of first 1e+05 cells:
-             Min. 1st Qu. Median Mean 3rd Qu. Max.  NA's
-    gifapar    NA      NA     NA  NaN      NA   NA 1e+05
-    dimension(s):
-       from   to         refsys point                       values x/y
-    X1    1 4091 WGS 84 (CRS84) FALSE [4091x4865] -10.86,...,9.139 [x]
-    X2    1 4865 WGS 84 (CRS84) FALSE  [4091x4865] 39.54,...,52.45 [y]
-    curvilinear grid
-
 Finally, we plot the GIFAPAR:
 
 ``` r
 plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
-
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/gifapar-plot-1.png)
