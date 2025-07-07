@@ -1,0 +1,176 @@
+---
+title: "The Benefits of EOPF Zarr over SAFE"
+format:
+  md:
+    df-print: tibble
+execute:
+  cache: true
+---
+
+# The Benefits of EOPF Zarr over SAFE
+
+Prior to the introduction of EOPF's Zarr, the ESA's Copernicus data was published and distributed using SAFE (TODO). Setinel scenes were downloaded as zip archives, containing several files as well as an XML manifest. In order to access any scene data, the entire zip archive had to be downloaded, which could be quite inefficient.
+
+Zarr is optimised for efficient data retrieval---arrays are segmented into one or more chunks, and a single Sentinel scene could potentially be across several chunks. A data consumer can choose to download only the chunks required for their use case, rather than the entire zip archive. There is no need to download all data before processing it, and data can be **lazy-loaded** so that it is only downloaded when required. The [Data Retrieval and Efficiency](TODO) section shows how this is more efficient in terms of both network bandwidth and compute resources.
+
+## Comparable SAFE example
+
+The following example accesses the same 60-metre quicklook image as the [Sentinel-2 mission example above]()TODO), using SAFE instead of EOPF Zarr. We will show how using Zarr downloads less data.
+
+For this portion of the tutorial, the [`httr2` package](TODO) (for working with APIs) is also required. You can install it directly from CRAN:
+
+```{r install-httr2}
+#| eval: false
+install.packages("httr2")
+```
+
+Then load it in:
+
+```{r load-httr2}
+#| cache: false
+library(httr2)
+```
+
+This example also requires authentication to the SAFE STAC API. You need a [Copernicus Dataspace](https://dataspace.copernicus.eu/)
+account, and to register an OAuth 2.0 client as described in [this article](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/Authentication.html). The resulting Client Credentials should be stored in the environment variables `CDSE_ID` and `CDSE_SECRET` (using e.g. `usethis::edit_r_environ()` to set these).
+
+We then use this to generate a **token**:
+
+```{r client-token}
+token <- oauth_client("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
+  id = "sh-62112dad-7f8c-4e1f-abc1-16cf93519302",
+  secret = "YrdqqqigqQ7630Ql6Ef6gxjU683j9M06",
+) %>%
+  oauth_flow_client_credentials()
+
+token
+```
+
+which will be used for accessing SAFE data. The `token` object contains the token itself and, as you can see, when it expires; 10 minutes after generation. 
+
+To access the SAFE data, we first get the STAC item from the Sentinel-2 collection. Its ID is the same as in the EOPF Sample Service STAC catalog example, with the suffix `.SAFE`.
+
+```{r safe-item}
+safe_id <- "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE"
+
+safe_item <- stac("https://catalogue.dataspace.copernicus.eu/stac/") %>%
+  collections(collection_id = "SENTINEL-2") |>
+  items(feature_id = safe_id) |>
+  get_request()
+
+safe_item
+```
+
+The relevant asset is the "PRODUCT" one:
+
+```{r safe-asset}
+safe_item %>%
+  items_assets()
+```
+
+We can select its URL for accessing the data:
+
+```{r safe-product-url}
+safe_url <- safe_item %>%
+  assets_select(asset_names = "PRODUCT") %>%
+  assets_url()
+
+safe_url
+```
+
+However, this URL actually redirects if we try to download the data, and the token is not properly passed. We must then first access the redirected URL. The following code sets up the API request via `httr2`'s `request()`, sets an option not to follow the redirect (so we can access the redirect URL manually), performs the request (via `req_perform()`), then accesses the new location from the header:
+
+```{r safe-product-redirect}
+safe_redirect_url <- request(safe_url) %>%
+  req_options(followlocation = FALSE) %>%
+  req_perform() %>%
+  resp_header("location")
+
+safe_redirect_url
+```
+
+The difference in the URL is that it is prefixed with `download` instead of `catalogue`. Now, we can use this new URL to actually get the data. Again, we set up the request, this time adding in the token as a [Bearer token](TODO) so that we are authenticated and have permission to access the data. There is also error handling, which is informative in case the token has expired; in which case, the above OAuth token generation code should be rerun. Finally, we perform the request and safe it to a ZIP file, stored in `safe_zip`.
+
+TODO -> show how long this takes
+
+```{r safe-get}
+#| echo: false
+# in non-temp dir for interactive development
+safe_dir <- here::here("scratch", "safe")
+safe_zip_new <- paste0(safe_dir, "/", safe_id, ".zip")
+safe_zip <- tempfile(fileext = ".zip")
+
+request(safe_redirect_url) %>%
+  req_auth_bearer_token(token$access_token) %>%
+  req_error(body = \(x) resp_body_json(x)[["message"]]) %>%
+  req_perform(path = safe_zip) 
+```
+
+```{r safe-get}
+#| eval: false
+safe_dir <- tempdir()
+safe_zip_new <- paste0(safe_dir, "/", safe_id, ".zip")
+safe_zip <- tempfile(fileext = ".zip")
+
+request(safe_redirect_url) %>%
+  req_auth_bearer_token(token$access_token) %>%
+  req_error(body = \(x) resp_body_json(x)[["message"]]) %>%
+  req_perform(path = safe_zip) 
+```
+
+We can look at this file and see its size (in gigabytes), which is quite large!
+
+```{r safe-size}
+library(fs)
+
+file_size(safe_zip) / 10^9
+```
+
+We need to unzip the file to access the relevant data:
+
+```{r}
+safe_unzip_dir <- paste0(safe_dir, "/", safe_id)
+unzip(safe_zip)
+
+safe_unzip_dir %>%
+  dir_ls()
+
+safe_dir <- safe_unzip_dir %>%
+  dir_ls()
+
+safe_files <- tibble(path = dir_ls(safe_dir)) %>%
+  mutate(file = basename(path)) %>%
+  relocate(file, .before = path)
+
+safe_files
+
+manifest_location <- safe_files %>%
+  filter(file == "manifest.safe") %>%
+  pull(path)
+
+manifest_location
+
+# read in the manifest
+
+library(xml2)
+
+manifest <- read_xml(manifest_location)
+
+file_loc <- manifest %>%
+  xml_find_first(".//dataObject[@ID='IMG_DATA_Band_TCI_60m_Tile1_Data']/byteStream/fileLocation") %>%
+  xml_attr("href")
+
+# TODO -> should not unzip to /id/id
+file_loc <- paste0(safe_unzip_dir, "/", safe_id, "/", str_remove(file_loc, "\\."))
+
+fs::file_size(file_loc)
+```
+
+The actual file is only 3.57 MB, versus the 1.26 GB of the whole zip
+
+```{r}
+stars::read_stars(file_loc) %>%
+  stars::st_rgb() %>%
+  plot()
+```
+
