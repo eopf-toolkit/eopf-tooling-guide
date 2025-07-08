@@ -42,7 +42,7 @@ We will use the following packages in this tutorial:
 STAC catalog), [`tidyverse`](https://tidyverse.tidyverse.org/) (for data
 manipulation), [`stars`](https://r-spatial.github.io/stars/)) (for
 working with spatiotemporal data), and
-[`terra`](https://rspatial.github.io/terra/index.html) (for manipulating
+[`terra`](https://rspatial.github.io/terra/index.html) (for working with
 spatial data in raster format). You can install them directly from CRAN:
 
 ``` r

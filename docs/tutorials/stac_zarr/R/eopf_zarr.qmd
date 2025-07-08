@@ -32,7 +32,7 @@ An R environment is required to follow this tutorial, with R version >= 4.1.0. W
 
 ## Dependencies
 
-We will use the following packages in this tutorial: [`rstac`](https://brazil-data-cube.github.io/rstac/) (for accessing the STAC catalog), [`tidyverse`](https://tidyverse.tidyverse.org/) (for data manipulation), [`stars`](https://r-spatial.github.io/stars/)) (for working with spatiotemporal data), and [`terra`](https://rspatial.github.io/terra/index.html) (for manipulating spatial data in raster format). You can install them directly from CRAN:
+We will use the following packages in this tutorial: [`rstac`](https://brazil-data-cube.github.io/rstac/) (for accessing the STAC catalog), [`tidyverse`](https://tidyverse.tidyverse.org/) (for data manipulation), [`stars`](https://r-spatial.github.io/stars/)) (for working with spatiotemporal data), and [`terra`](https://rspatial.github.io/terra/index.html) (for working with spatial data in raster format). You can install them directly from CRAN:
 
 ```{r install-rstac}
 #| eval: false
