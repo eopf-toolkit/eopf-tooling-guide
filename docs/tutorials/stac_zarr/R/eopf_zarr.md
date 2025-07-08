@@ -16,6 +16,11 @@
     -   [Sentinel-1](#sentinel-1)
     -   [Sentinel-2](#sentinel-2)
     -   [Sentinel-3](#sentinel-3)
+-   [The benefits of EOPF Zarr over
+    SAFE](#the-benefits-of-eopf-zarr-over-safe)
+    -   [Zarr example](#zarr-example)
+    -   [Safe example](#safe-example)
+    -   [Comparisons](#comparisons)
 
 # Introduction
 
@@ -1072,7 +1077,7 @@ plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/gifapar-plot-1.png)
 
-# The Benefits of EOPF Zarr over SAFE
+# The benefits of EOPF Zarr over SAFE
 
 Prior to the introduction of EOPF’s Zarr, the ESA’s Copernicus data was
 published and distributed using the [Standard Archive Format for Europe
@@ -1091,17 +1096,16 @@ be **lazy-loaded** so that it is only downloaded when required. The
 [Data Retrieval and Efficiency](TODO) section shows how this is more
 efficient in terms of both network bandwidth and compute resources.
 
-TODO, explain that we will first show Zarr and then show SAFE?
+The following section will contrast the processes for working with EOPF
+Zarr versus the SAFE format, showing that Zarr takes less code, time,
+and downloads less data.
 
-## EOPF Zarr Example
+## Zarr example
 
-The following example shows how to access the 60-metre resolution
-quicklook of a Sentinel-2 mission (TODO -\> what is this exactly)? It is
-explored in more detail in the [previous tutorial](./eopf_zarr.md),
-which we recommend reviewing first for full context (TODO, link actual
-example). For comparison to an example using SAFE data, we set up
-`zarr_start` and `zarr_end` to time the data retrieval and visualisation
-process.
+This example how to access the 60-metre resolution quicklook of a
+Sentinel-2 mission, explored in more detail [above](#sentinel-2). We set
+up `zarr_start` and `zarr_end` to time the data retrieval and
+visualisation process, for comparison to the SAFE process later on.
 
 ``` r
 zarr_start <- Sys.time()
@@ -1141,11 +1145,10 @@ r60m_tci |>
 zarr_end <- Sys.time()
 ```
 
-## SAFE Example
+## SAFE example
 
 The following example accesses the same 60-metre quicklook image as the
-example above, using SAFE instead of EOPF Zarr. We will show how using
-Zarr takes less time, memory, and downloads less data.
+example above, using SAFE instead of EOPF Zarr.
 
 For this portion of the tutorial, we also require
 [`httr2`](https://httr2.r-lib.org/) (for working with APIs),
@@ -1165,43 +1168,19 @@ install.packages("lobstr")
 ``` r
 library(httr2)
 library(xml2)
-```
-
-
-    Attaching package: 'xml2'
-
-    The following object is masked from 'package:httr2':
-
-        url_parse
-
-``` r
 library(fs)
-```
-
-
-    Attaching package: 'fs'
-
-    The following object is masked from 'package:DelayedArray':
-
-        path
-
-    The following object is masked from 'package:BiocGenerics':
-
-        path
-
-``` r
 library(lobstr)
 ```
 
 This example also requires authentication to the SAFE STAC API. You need
 a [Copernicus Dataspace](https://dataspace.copernicus.eu/) account, and
-to register an OAuth 2.0 client as described in [this
+to register an OAuth 2.0 client, as described in [this
 article](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/Authentication.html).
 The resulting Client Credentials should be stored in the environment
 variables `CDSE_ID` and `CDSE_SECRET` (using
 e.g. `usethis::edit_r_environ()` to set these).
 
-We then use this to generate a **token**:
+We then use this to generate a *token*:
 
 ``` r
 token <- oauth_client("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
@@ -1234,7 +1213,7 @@ generation).
 To access the SAFE data, we first get the STAC item from the Sentinel-2
 collection. Its ID is the same as in the EOPF Sample Service STAC
 catalog example, with the suffix `.SAFE`. We’ll also set up timing how
-long this process takes in `safe_start`.
+long this process takes, in `safe_start`.
 
 ``` r
 safe_start <- Sys.time()
@@ -1279,8 +1258,8 @@ safe_url
 
     [1] "https://catalogue.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value"
 
-However, this URL actually redirects if we try to download the data, and
-the token is not properly passed. We must then first access the
+However, this URL actually *redirects* if we try to download the data,
+and the token is not properly passed. We must then first access the
 redirected URL. The following code sets up the API request via `httr2`’s
 `request()`, sets an option not to follow the redirect (so we can access
 the redirect URL manually), performs the request (via `req_perform()`),
@@ -1306,6 +1285,16 @@ token has expired; in which case, the above OAuth token generation code
 should be rerun. Finally, we perform the request and safe it to a ZIP
 file, stored in `safe_zip`.
 
+``` r
+safe_dir <- tempdir()
+safe_zip <- paste0(safe_dir, "/", safe_id, ".zip")
+
+request(safe_redirect_url) |>
+  req_auth_bearer_token(token$access_token) |>
+  req_error(body = \(x) resp_body_json(x)[["message"]]) |>
+  req_perform(path = safe_zip)
+```
+
     <httr2_response>
 
     GET
@@ -1316,18 +1305,7 @@ file, stored in `safe_zip`.
     Content-Type: application/zip
 
     Body: On disk
-    '/Users/sharla/Documents/Consulting/Sparkgeo/EOPF/eopf-tooling-guide/docs/tutorials/stac_zarr/R/scratch/safe/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE.zip'
     (1259528508 bytes)
-
-``` r
-safe_dir <- tempdir()
-safe_zip <- paste0(safe_dir, "/", safe_id, ".zip")
-
-request(safe_redirect_url) |>
-  req_auth_bearer_token(token$access_token) |>
-  req_error(body = \(x) resp_body_json(x)[["message"]]) |>
-  req_perform(path = safe_zip)
-```
 
 We need to unzip the file and find the manifest file, which contains
 information on where different data sets are.
@@ -1395,32 +1373,32 @@ r60m_tci_safe |>
 safe_end <- Sys.time()
 ```
 
-## EOPF Zarr versus SAFE
+## Comparisons
 
 To contrast with the Zarr example, we’ll look at how long the processes
 took, how large the objects are, and how much data was saved to disk.
 
 First, to compare the time:
 
-    Time difference of 32.39 secs
-
 ``` r
 zarr_end - zarr_start
 ```
 
-    Time difference of 12.77 mins
+    Time difference of 32.39 secs
 
 ``` r
 safe_end - safe_start
 ```
 
+    Time difference of 12.77 mins
+
 ``` r
-time_diff <- safe_time_numeric - zarr_time_numeric
-time_diff_min <- time_diff / 60
+time_diff <- (safe_time_numeric * 60) - zarr_time_numeric
+time_diff_min <- round(time_diff / 60, 2)
 ```
 
-The EOPF Zarr example took 32.39, while the SAFE example took 12.77—a
-difference of -19.62 seconds, or -0.327 minutes.
+The EOPF Zarr example took 32.39 seconds, while the SAFE example took
+12.77 minutes—a difference of 733.81 seconds, or 12.23 minutes.
 
 We can also compare the size of the objects in R:
 
@@ -1428,7 +1406,7 @@ We can also compare the size of the objects in R:
 obj_size(r60m_tci)
 ```
 
-    9.77 MB
+    100.88 MB
 
 ``` r
 obj_size(r60m_tci_safe)
@@ -1464,13 +1442,41 @@ file_size(safe_r60m_quicklook_location)
 
     3.57M
 
-So, of the 1.2595285^{9} saved to disk, only 3.81353^{6} was actually
-read in—only 0.3%.
+So, of the 1.17 GB saved to disk, only 0.3% was actually used.
 
 To summarise:
 
-    # A tibble: 2 × 5
-      Format    Time        `Downloaded to disk` `Download used` `Object size`
-      <chr>     <drtn>      <chr>                <chr>           <lbstr_by>   
-    1 EOPF Zarr  32.39 secs ---                  ---             100.88 MB    
-    2 SAFE      766.20 secs 1.17G                0.3%             45.99 MB    
+<table style="width:100%;">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 17%" />
+<col style="width: 28%" />
+<col style="width: 20%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Format</th>
+<th style="text-align: left;">Time</th>
+<th style="text-align: left;">Downloaded to disk</th>
+<th style="text-align: left;">Download used</th>
+<th style="text-align: right;">Object size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">EOPF Zarr</td>
+<td style="text-align: left;">32.39 secs</td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">—</td>
+<td style="text-align: right;">100.88 MB</td>
+</tr>
+<tr>
+<td style="text-align: left;">SAFE</td>
+<td style="text-align: left;">766.20 secs</td>
+<td style="text-align: left;">1.17G</td>
+<td style="text-align: left;">0.3%</td>
+<td style="text-align: right;">45.99 MB</td>
+</tr>
+</tbody>
+</table>
