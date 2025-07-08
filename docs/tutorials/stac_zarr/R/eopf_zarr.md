@@ -1,4 +1,4 @@
-# Access and Analyse EOPF STAC Zarr Data with R
+# Access and analyse EOPF STAC Zarr data with R
 
 
 # Table of Contents
