@@ -1093,8 +1093,8 @@ across several chunks. A data consumer can choose to download only the
 chunks required for their use case, rather than the entire zip archive.
 There is no need to download all data before processing it, and data can
 be **lazy-loaded** so that it is only downloaded when required. The
-[Data Retrieval and Efficiency](TODO) section shows how this is more
-efficient in terms of both network bandwidth and compute resources.
+[Comparisons](#comparisons) section shows how this is more efficient in
+terms of both network bandwidth and compute resources.
 
 The following section will contrast the processes for working with EOPF
 Zarr versus the SAFE format, showing that Zarr takes less code, time,
@@ -1198,7 +1198,7 @@ token
 
     • access_token      : <REDACTED>
 
-    • expires_at        : "2025-07-08 11:20:21"
+    • expires_at        : "2025-07-08 12:17:27"
 
     • refresh_expires_in: 0
 
@@ -1384,21 +1384,21 @@ First, to compare the time:
 zarr_end - zarr_start
 ```
 
-    Time difference of 32.39 secs
+    Time difference of 45.53 secs
 
 ``` r
 safe_end - safe_start
 ```
 
-    Time difference of 12.77 mins
+    Time difference of 5.79 mins
 
 ``` r
 time_diff <- (safe_time_numeric * 60) - zarr_time_numeric
 time_diff_min <- round(time_diff / 60, 2)
 ```
 
-The EOPF Zarr example took 32.39 seconds, while the SAFE example took
-12.77 minutes—a difference of 733.81 seconds, or 12.23 minutes.
+The EOPF Zarr example took 45.53 seconds, while the SAFE example took
+5.79 minutes—a difference of 301.87 seconds, or 5.03 minutes.
 
 We can also compare the size of the objects in R:
 
@@ -1406,7 +1406,7 @@ We can also compare the size of the objects in R:
 obj_size(r60m_tci)
 ```
 
-    100.88 MB
+    9.77 MB
 
 ``` r
 obj_size(r60m_tci_safe)
@@ -1466,17 +1466,53 @@ To summarise:
 <tbody>
 <tr>
 <td style="text-align: left;">EOPF Zarr</td>
-<td style="text-align: left;">32.39 secs</td>
+<td style="text-align: left;">45.53 secs</td>
 <td style="text-align: left;">—</td>
 <td style="text-align: left;">—</td>
-<td style="text-align: right;">100.88 MB</td>
+<td style="text-align: right;">9.77 MB</td>
 </tr>
 <tr>
 <td style="text-align: left;">SAFE</td>
-<td style="text-align: left;">766.20 secs</td>
+<td style="text-align: left;">347.40 secs</td>
 <td style="text-align: left;">1.17G</td>
 <td style="text-align: left;">0.3%</td>
 <td style="text-align: right;">45.99 MB</td>
 </tr>
 </tbody>
 </table>
+
+## Optimisations
+
+The transition from SAFE to EOPF Zarr presents opportunities for
+optimisations that may affect the data provider (ESA), the data
+consumer, or both.
+
+### Chunk Size
+
+Zarr supports configurable chunk sizes for array data. A Zarr store may
+contain many n-dimensional arrays and each can support a unique chunk
+size. Each array will comprise one or more chunks of this size.
+
+Chunk size is determined by the data provider and, ideally, is
+configured such that the chunks downloaded by a data consumer to satisfy
+a given use-case include minimal extraneous data.
+
+### STAC Metadata and Zarr
+
+The relationship between STAC metadata and Zarr stores is a source of
+discussion and a number of different strategies are available, each with
+differing advantages and disadvantages. Additional context on this
+subject can be found in the [Cloud-Optimized Geospatial Formats
+Guide](https://guide.cloudnativegeo.org/cookbooks/zarr-stac-report/#new-approaches).
+
+The approach adopted for STAC metadata in the EOPF Sample STAC Service
+most closely aligns to the [many smaller Zarr
+stores](https://guide.cloudnativegeo.org/cookbooks/zarr-stac-report/#many-smaller-zarr-stores)
+approach.
+
+### Memory Limitations
+
+If a use case requires more memory than the data consumer can support,
+even after optimisation efforts, it may be necessary to use a
+cloud-hosted compute environment with access to a larger pool of compute
+resources.

@@ -390,9 +390,9 @@ plot(owi_stars, main = "Wind Direction", as_points = FALSE, axes = TRUE, breaks 
 
 ## Sentinel-2
 
-TODO -> explained other missions, should we explain this mission?
+For this example, we return to the [Sentinel-2 Level-2A Collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a). The Sentinel-2 mission is based on two satellites with 13 spectral bands, with four bands at 10-metre resolution, six bands at 20-metres resolution, and three bands at 60-metre resolution. The mission supports applications for land services, including the monitoring of vegetation, soil and water cover, as well as the observation of inland waterways and coastal areas.
 
-EOPF Zarr Assets include quicklook RGB composites, which are readily viewable representations of the satellite image. We will open the 10-metre resolution quicklook and visualise it. This is available as an asset, so we can access it directly from the STAC item.
+EOPF Zarr assets include quicklook RGB composites, which are readily viewable representations of the satellite image. We will open the 10-metre resolution quicklook and visualise it. This is available as an asset, so we can access it directly from the STAC item.
 
 ```{r tci-10m-asset}
 tci_10m_asset <- s2_l2a_item |>
@@ -571,7 +571,7 @@ plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.
 
 Prior to the introduction of EOPF's Zarr, the ESA's Copernicus data was published and distributed using the [Standard Archive Format for Europe (SAFE)](https://earth.esa.int/eogateway/activities/safe-the-standard-archive-format-for-europe). Sentinel scenes were downloaded as zip archives, containing several files as well as an XML manifest. In order to access any scene data, the entire zip archive had to be downloaded, which could be quite inefficient.
 
-Zarr is optimised for efficient data retrieval---arrays are segmented into one or more chunks, and a single Sentinel scene could potentially be across several chunks. A data consumer can choose to download only the chunks required for their use case, rather than the entire zip archive. There is no need to download all data before processing it, and data can be **lazy-loaded** so that it is only downloaded when required. The [Data Retrieval and Efficiency](TODO) section shows how this is more efficient in terms of both network bandwidth and compute resources.
+Zarr is optimised for efficient data retrieval---arrays are segmented into one or more chunks, and a single Sentinel scene could potentially be across several chunks. A data consumer can choose to download only the chunks required for their use case, rather than the entire zip archive. There is no need to download all data before processing it, and data can be **lazy-loaded** so that it is only downloaded when required. The [Comparisons](#comparisons) section shows how this is more efficient in terms of both network bandwidth and compute resources.
 
 The following section will contrast the processes for working with EOPF Zarr versus the SAFE format, showing that Zarr takes less code, time, and downloads less data.
 
@@ -902,3 +902,23 @@ tribble(
 ) |>
   knitr::kable()
 ```
+
+## Optimisations
+
+The transition from SAFE to EOPF Zarr presents opportunities for optimisations that may affect the data provider (ESA), the data consumer, or both.
+
+### Chunk Size
+
+Zarr supports configurable chunk sizes for array data. A Zarr store may contain many n-dimensional arrays and each can support a unique chunk size. Each array will comprise one or more chunks of this size.
+
+Chunk size is determined by the data provider and, ideally, is configured such that the chunks downloaded by a data consumer to satisfy a given use-case include minimal extraneous data.
+
+### STAC Metadata and Zarr
+
+The relationship between STAC metadata and Zarr stores is a source of discussion and a number of different strategies are available, each with differing advantages and disadvantages. Additional context on this subject can be found in the [Cloud-Optimized Geospatial Formats Guide](https://guide.cloudnativegeo.org/cookbooks/zarr-stac-report/#new-approaches).
+
+The approach adopted for STAC metadata in the EOPF Sample STAC Service most closely aligns to the [many smaller Zarr stores](https://guide.cloudnativegeo.org/cookbooks/zarr-stac-report/#many-smaller-zarr-stores) approach.
+
+### Memory Limitations
+
+If a use case requires more memory than the data consumer can support, even after optimisation efforts, it may be necessary to use a cloud-hosted compute environment with access to a larger pool of compute resources.
