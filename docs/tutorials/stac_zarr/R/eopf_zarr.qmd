@@ -24,7 +24,7 @@ execute:
   
 # Introduction
 
-This tutorial will explore how to access and analyse Zarr data from the [EOPF Sample Service STAC catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using R. It follows... TODO
+This tutorial will explore how to access and analyse Zarr data from the [EOPF Sample Service STAC catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using R. It follows the [first tutorial](/eopf_stac_access.md), which goes into more detail on accessing and searching within the STAC catalog.
 
 # Prerequisites
 
@@ -107,7 +107,7 @@ If you try to run some of the examples below and receive a timeout error, please
 
 # Access Zarr data from the STAC Catalog
 
-The first step of accessing Zarr data is to understand the assets within the EOPF Sample Service STAC catalog. The [first tutorial](/eopf_stac_access.qmd) goes into detail on this, so we recommend reviewing it if you have not already.
+The first step of accessing Zarr data is to understand the assets within the EOPF Sample Service STAC catalog. The [first tutorial](/eopf_stac_access.md) goes into detail on this, so we recommend reviewing it if you have not already.
 
 For the first part of this tutorial, we will be using data from the [Sentinel-2 Level-2A Collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a). We fetch the "product" asset under a given item, and can look at its URL:
 
@@ -559,3 +559,5 @@ Finally, we plot the GIFAPAR:
 #| message: false
 plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
+
+In the [next tutorial](/zarr_vs_safe.md), we will explore the benefits of using EOPF Zarr over the prior format, SAFE (Standard Archive Format for Europe).

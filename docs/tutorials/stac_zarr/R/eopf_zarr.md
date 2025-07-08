@@ -22,7 +22,8 @@
 This tutorial will explore how to access and analyse Zarr data from the
 [EOPF Sample Service STAC
 catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using
-R. It follows… TODO
+R. It follows the [first tutorial](./eopf_stac_access.md), which goes
+into more detail on accessing and searching within the STAC catalog.
 
 # Prerequisites
 
@@ -122,7 +123,7 @@ error, please ensure that you have run the above code block.
 
 The first step of accessing Zarr data is to understand the assets within
 the EOPF Sample Service STAC catalog. The [first
-tutorial](./eopf_stac_access.qmd) goes into detail on this, so we
+tutorial](./eopf_stac_access.md) goes into detail on this, so we
 recommend reviewing it if you have not already.
 
 For the first part of this tutorial, we will be using data from the
@@ -1068,3 +1069,7 @@ plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.
 ```
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/gifapar-plot-1.png)
+
+In the [next tutorial](./zarr_vs_safe.md), we will explore the benefits
+of using EOPF Zarr over the prior format, SAFE (Standard Archive Format
+for Europe).
