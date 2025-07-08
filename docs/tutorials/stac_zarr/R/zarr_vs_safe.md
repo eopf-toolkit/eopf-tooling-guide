@@ -124,10 +124,12 @@ error, please ensure that you have run the above code block.
 # The Benefits of EOPF Zarr over SAFE
 
 Prior to the introduction of EOPF’s Zarr, the ESA’s Copernicus data was
-published and distributed using SAFE (TODO). Setinel scenes were
-downloaded as zip archives, containing several files as well as an XML
-manifest. In order to access any scene data, the entire zip archive had
-to be downloaded, which could be quite inefficient.
+published and distributed using the [Standard Archive Format for Europe
+(SAFE)](https://earth.esa.int/eogateway/activities/safe-the-standard-archive-format-for-europe).
+Sentinel scenes were downloaded as zip archives, containing several
+files as well as an XML manifest. In order to access any scene data, the
+entire zip archive had to be downloaded, which could be quite
+inefficient.
 
 Zarr is optimised for efficient data retrieval—arrays are segmented into
 one or more chunks, and a single Sentinel scene could potentially be
@@ -138,13 +140,16 @@ be **lazy-loaded** so that it is only downloaded when required. The
 [Data Retrieval and Efficiency](TODO) section shows how this is more
 efficient in terms of both network bandwidth and compute resources.
 
+TODO, explain that we will first show Zarr and then show SAFE?
+
 ## Zarr example
 
-The following example is explored in more detail in the [previous
-tutorial](./eopf_zarr.md). In short, the code to access the correct STAC
-item and visualize the quicklook is:
-
-TODO, note about timing this process?
+The following example shows how to access the 60-metre resolution
+quicklook of a Sentinel-2 mission (TODO -\> what is this exactly)? It is
+explored in more detail in the [previous tutorial](./eopf_zarr.md),
+which we recommend reviewing first for full context. For comparison to
+an example using SAFE data, we set up `zarr_start` and `zarr_end` to
+time the data retrieval and visualisation process.
 
 ``` r
 zarr_start <- Sys.time()
@@ -162,8 +167,8 @@ s2_l2a_product_url <- s2_l2a_product |>
 
 zarr_store <- s2_l2a_product_url |>
   zarr_overview(as_data_frame = TRUE) |>
-    mutate(array = str_remove(path, s2_l2a_product_url)) |>
-    relocate(array, .before = path)
+  mutate(array = str_remove(path, s2_l2a_product_url)) |>
+  relocate(array, .before = path)
 
 r60m_tci <- zarr_store |>
   filter(array == "/quality/l2a_quicklook/r60m/tci") |>
@@ -172,7 +177,7 @@ r60m_tci <- zarr_store |>
 
 r60m_tci <- r60m_tci |>
   aperm(c(2, 3, 1)) |>
-  rast() 
+  rast()
 
 r60m_tci |>
   plotRGB()
@@ -194,33 +199,20 @@ zarr_time
 
     Time difference of 41.35876 secs
 
-We can look at the size of the `r60m_tci` object using `lobstr`’s
+And can look at the size of the `r60m_tci` object using `lobstr`’s
 `obj_size()`
 
 ``` r
-zarr_size <- r60m_tci %>%
-  obj_size()
-
-zarr_size
+obj_size(r60m_tci)
 ```
 
-    9.75 MB
-
-And see the memory currently used by R:
-
-``` r
-zarr_memory <- mem_used()
-
-zarr_memory
-```
-
-    435.63 MB
+    99.86 MB
 
 ## Comparable SAFE example
 
 The following example accesses the same 60-metre quicklook image as the
-[Sentinel-2 mission example above]()TODO), using SAFE instead of EOPF
-Zarr. We will show how using Zarr downloads less data.
+example above, using SAFE instead of EOPF Zarr. We will show how using
+Zarr takes less time, memory, and downloads less data.
 
 This example also requires authentication to the SAFE STAC API. You need
 a [Copernicus Dataspace](https://dataspace.copernicus.eu/) account, and
@@ -257,13 +249,13 @@ token
     • scope             : "email profile user-context"
 
 which will be used for accessing SAFE data. The `token` object contains
-the token itself and, as you can see, when it expires; 10 minutes after
+the token itself and, as you can see, when it expires: 10 minutes after
 generation.
 
 To access the SAFE data, we first get the STAC item from the Sentinel-2
 collection. Its ID is the same as in the EOPF Sample Service STAC
 catalog example, with the suffix `.SAFE`. We’ll also set up timing how
-long this process takes.
+long this process takes in `safe_start`.
 
 ``` r
 safe_start <- Sys.time()
@@ -287,7 +279,7 @@ safe_item
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-The relevant asset is the “PRODUCT” one:
+The relevant asset is “PRODUCT”:
 
 ``` r
 safe_item |>
@@ -328,54 +320,34 @@ safe_redirect_url
 
 The difference in the URL is that it is prefixed with `download` instead
 of `catalogue`. Now, we can use this new URL to actually get the data.
-Again, we set up the request, this time adding in the token as a [Bearer
-token](TODO) so that we are authenticated and have permission to access
-the data. There is also error handling, which is informative in case the
+Again, we set up the request, this time adding in the token as a Bearer
+token so that we are authenticated and have permission to access the
+data. There is also error handling, which is informative in case the
 token has expired; in which case, the above OAuth token generation code
 should be rerun. Finally, we perform the request and safe it to a ZIP
 file, stored in `safe_zip`.
 
-    <httr2_response>
-
-    GET
-    https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value
-
-    Status: 200 OK
-
-    Content-Type: application/zip
-
-    Body: On disk
-    '/var/folders/j5/d1hztrys1xzg_8557yh176300000gn/T//RtmpOkSX4g/file9db35b1cd3db.zip'
-    (1259528508 bytes)
-
 ``` r
 safe_dir <- tempdir()
-safe_zip_new <- paste0(safe_dir, "/", safe_id, ".zip")
-safe_zip <- tempfile(fileext = ".zip")
+safe_zip <- paste0(safe_dir, "/", safe_id, ".zip")
 
 request(safe_redirect_url) |>
   req_auth_bearer_token(token$access_token) |>
   req_error(body = \(x) resp_body_json(x)[["message"]]) |>
-  req_perform(path = safe_zip) 
+  req_perform(path = safe_zip)
 ```
 
-We need to unzip the file to access the relevant data:
+We need to unzip the file and find the manifest file, which contains
+information on where different data sets are.
 
 ``` r
-safe_unzip_dir <- paste0(safe_dir, "/", safe_id)
-unzip(safe_zip)
+# TODO, sort out path etc
+safe_unzip_dir <- paste0(safe_dir, "/", safe_id) # TODO
+unzip(safe_zip, exdir = safe_dir)
 
-safe_unzip_dir |>
-  dir_ls()
-```
+safe_files_dir <- paste0(safe_unzip_dir, "/", safe_id)
 
-    /Users/sharla/Documents/Consulting/Sparkgeo/EOPF/eopf-tooling-guide/docs/tutorials/stac_zarr/R/scratch/safe/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE
-
-``` r
-safe_dir <- safe_unzip_dir |>
-  dir_ls()
-
-safe_files <- tibble(path = dir_ls(safe_dir)) |>
+safe_files <- tibble(path = dir_ls(safe_files_dir)) |>
   mutate(file = basename(path)) |>
   relocate(file, .before = path)
 
@@ -404,21 +376,27 @@ manifest_location
 
     /Users/sharla/Documents/Consulting/Sparkgeo/EOPF/eopf-tooling-guide/docs/tutorials/stac_zarr/R/scratch/safe/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE/manifest.safe
 
+We then read in the manifest file, and find the location of the 60-metre
+resolution data.
+
 ``` r
 manifest <- read_xml(manifest_location)
 
-file_loc <- manifest |>
+safe_60m_quicklook_location <- manifest |>
   xml_find_first(".//dataObject[@ID='IMG_DATA_Band_TCI_60m_Tile1_Data']/byteStream/fileLocation") |>
   xml_attr("href")
 
-# TODO -> should not unzip to /id/id
-file_loc <- paste0(safe_unzip_dir, "/", safe_id, "/", str_remove(file_loc, "\\."))
+safe_60m_quicklook_location
 ```
 
-The actual file is only 3.57 MB, versus the 1.26 GB of the whole zip
+    [1] "./GRANULE/L2A_T32TPT_A042991_20250530T101708/IMG_DATA/R60m/T32TPT_20250530T101559_TCI_60m.jp2"
+
+Which we can then read in and visualize:
 
 ``` r
-r60m_tci_safe <- stars::read_stars(file_loc) |>
+safe_60m_quicklook_location <- paste0(safe_files_dir, safe_60m_quicklook_location %>% str_remove("\\."))
+  
+r60m_tci_safe <- stars::read_stars(safe_60m_quicklook_location) |>
   stars::st_rgb()
 
 r60m_tci_safe |>
@@ -433,50 +411,87 @@ r60m_tci_safe |>
 safe_end <- Sys.time()
 ```
 
-To contrast with the Zarr example, we’ll look at how long the process
-took, how large the objects are, and how much memory R is using. Note
-also that the SAFE example requires saving the entire archive to disk,
-while nothing is saved to disk in the Zarr example.
+## Comparing EOPF Zarr versus SAFE
+
+To contrast with the Zarr example, we’ll look at how long the processes
+took, how large the objects are, and how much data was saved to disk.
+
+First, to compare the time:
+
+``` r
+zarr_time <- zarr_end - zarr_start
+
+zarr_time
+```
+
+    Time difference of 38.24224 secs
 
 ``` r
 safe_time <- safe_end - safe_start
+
+safe_time
 ```
 
-``` r
-safe_size <- r60m_tci_safe %>%
-  obj_size()
+    Time difference of 22.03987 hours
 
-safe_size
+``` r
+safe_time - zarr_time
+```
+
+    Time difference of 79305.28 secs
+
+And the size of the objects in R:
+
+``` r
+obj_size(r60m_tci)
+```
+
+    9.75 MB
+
+``` r
+obj_size(r60m_tci_safe)
 ```
 
     45.99 MB
 
-And see the memory currently used by R:
-
 ``` r
-safe_memory <- mem_used()
-
-safe_memory
+obj_size(r60m_tci_safe) - obj_size(r60m_tci)
 ```
 
-    491.63 MB
+    36.23 MB
+
+Note also that the SAFE example requires saving the entire archive to
+disk, while nothing is saved to disk in the Zarr example. The size of
+the full archive is:
 
 ``` r
-file_size(safe_zip) / 10^9
+file_size(safe_zip)
 ```
 
-    1.26
+    1.15G
+
+while the size of the manifest file, and the 60-metre resolution
+quicklook file are:
 
 ``` r
-file_size(file_loc)
+file_size(manifest_location)
+```
+
+    67.3K
+
+``` r
+file_size(safe_60m_quicklook_location)
 ```
 
     3.57M
 
+So, of the 1.2353587^{9} saved to disk, only 3.81353^{6} was actually
+read in – only 0.31%.
+
 To summarise:
 
-    # A tibble: 2 × 6
-      Format    Time        `Disk size` `Disk size used` `Object size` `Memory used`
-      <chr>     <drtn>      <glue>      <glue>           <lbstr_by>    <lbstr_by>   
-    1 EOPF Zarr  41.35876 … ---         ---               9.75 MB      435.63 MB    
-    2 SAFE      431.82684 … NA gb       3.744583 mb      45.99 MB      491.63 MB    
+    # A tibble: 2 × 5
+      Format    Time             `Downloaded to disk` `Download used` `Object size`
+      <chr>     <drtn>           <chr>                <chr>           <lbstr_by>   
+    1 EOPF Zarr    38.24224 secs ---                  ---             99.86 MB     
+    2 SAFE      79343.51846 secs 1.15G                0.31%           45.99 MB     
