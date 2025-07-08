@@ -475,4 +475,4 @@ names(zarr_arrays)
 head(zarr_arrays, 3)
 ```
 
-This leads into our next tutorial, where the assets will be used to access and work with Zarr data. 
+This leads into our [next tutorial](/eopf_zarr.md), where the assets will be used to access and work with Zarr data. 

@@ -1156,5 +1156,5 @@ head(zarr_arrays, 3)
     $B02_10m$roles
     [1] "data"        "reflectance"
 
-This leads into our next tutorial, where the assets will be used to
-access and work with Zarr data.
+This leads into our [next tutorial](./eopf_zarr.md), where the assets
+will be used to access and work with Zarr data.
