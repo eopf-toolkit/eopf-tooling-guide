@@ -706,6 +706,8 @@ plot(owi_stars, main = "Wind Direction", as_points = FALSE, axes = TRUE, breaks 
 
 ## Sentinel-2
 
+TODO -\> explained other missions, should we explain this mission?
+
 EOPF Zarr Assets include quicklook RGB composites, which are readily
 viewable representations of the satellite image. We will open the
 10-metre resolution quicklook and visualise it. This is available as an
@@ -1070,6 +1072,405 @@ plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/gifapar-plot-1.png)
 
-In the [next tutorial](./zarr_vs_safe.md), we will explore the benefits
-of using EOPF Zarr over the prior format, SAFE (Standard Archive Format
-for Europe).
+# The Benefits of EOPF Zarr over SAFE
+
+Prior to the introduction of EOPF’s Zarr, the ESA’s Copernicus data was
+published and distributed using the [Standard Archive Format for Europe
+(SAFE)](https://earth.esa.int/eogateway/activities/safe-the-standard-archive-format-for-europe).
+Sentinel scenes were downloaded as zip archives, containing several
+files as well as an XML manifest. In order to access any scene data, the
+entire zip archive had to be downloaded, which could be quite
+inefficient.
+
+Zarr is optimised for efficient data retrieval—arrays are segmented into
+one or more chunks, and a single Sentinel scene could potentially be
+across several chunks. A data consumer can choose to download only the
+chunks required for their use case, rather than the entire zip archive.
+There is no need to download all data before processing it, and data can
+be **lazy-loaded** so that it is only downloaded when required. The
+[Data Retrieval and Efficiency](TODO) section shows how this is more
+efficient in terms of both network bandwidth and compute resources.
+
+TODO, explain that we will first show Zarr and then show SAFE?
+
+## EOPF Zarr Example
+
+The following example shows how to access the 60-metre resolution
+quicklook of a Sentinel-2 mission (TODO -\> what is this exactly)? It is
+explored in more detail in the [previous tutorial](./eopf_zarr.md),
+which we recommend reviewing first for full context (TODO, link actual
+example). For comparison to an example using SAFE data, we set up
+`zarr_start` and `zarr_end` to time the data retrieval and visualisation
+process.
+
+``` r
+zarr_start <- Sys.time()
+
+s2_l2a_item <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-2-l2a") |>
+  items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") |>
+  get_request()
+
+s2_l2a_product <- s2_l2a_item |>
+  assets_select(asset_names = "product")
+
+s2_l2a_product_url <- s2_l2a_product |>
+  assets_url()
+
+zarr_store <- s2_l2a_product_url |>
+  zarr_overview(as_data_frame = TRUE) |>
+  mutate(array = str_remove(path, s2_l2a_product_url)) |>
+  relocate(array, .before = path)
+
+r60m_tci <- zarr_store |>
+  filter(array == "/quality/l2a_quicklook/r60m/tci") |>
+  pull(path) |>
+  read_zarr_array()
+
+r60m_tci <- r60m_tci |>
+  aperm(c(2, 3, 1)) |>
+  rast()
+
+r60m_tci |>
+  plotRGB()
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/zarr-ex-1.png)
+
+``` r
+zarr_end <- Sys.time()
+```
+
+## SAFE Example
+
+The following example accesses the same 60-metre quicklook image as the
+example above, using SAFE instead of EOPF Zarr. We will show how using
+Zarr takes less time, memory, and downloads less data.
+
+For this portion of the tutorial, we also require
+[`httr2`](https://httr2.r-lib.org/) (for working with APIs),
+[`xml2`](https://xml2.r-lib.org) (for accessing metadata from SAFE
+files), [`fs`](https://fs.r-lib.org/) (for accessing file locations and
+sizes), and [`lobstr`](https://lobstr.r-lib.org) (for calculating the
+size of objects within R). You can install them directly from CRAN. Note
+that `xml2` is a part of `tidyverse`, so it does not need to be
+installed separately, but it will be loaded separately.
+
+``` r
+install.packages("httr2")
+install.packages("fs")
+install.packages("lobstr")
+```
+
+``` r
+library(httr2)
+library(xml2)
+```
+
+
+    Attaching package: 'xml2'
+
+    The following object is masked from 'package:httr2':
+
+        url_parse
+
+``` r
+library(fs)
+```
+
+
+    Attaching package: 'fs'
+
+    The following object is masked from 'package:DelayedArray':
+
+        path
+
+    The following object is masked from 'package:BiocGenerics':
+
+        path
+
+``` r
+library(lobstr)
+```
+
+This example also requires authentication to the SAFE STAC API. You need
+a [Copernicus Dataspace](https://dataspace.copernicus.eu/) account, and
+to register an OAuth 2.0 client as described in [this
+article](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/Authentication.html).
+The resulting Client Credentials should be stored in the environment
+variables `CDSE_ID` and `CDSE_SECRET` (using
+e.g. `usethis::edit_r_environ()` to set these).
+
+We then use this to generate a **token**:
+
+``` r
+token <- oauth_client("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
+  id = "sh-62112dad-7f8c-4e1f-abc1-16cf93519302",
+  secret = "YrdqqqigqQ7630Ql6Ef6gxjU683j9M06",
+) |>
+  oauth_flow_client_credentials()
+
+token
+```
+
+    <httr2_token>
+
+    • token_type        : "Bearer"
+
+    • access_token      : <REDACTED>
+
+    • expires_at        : "2025-07-08 11:20:21"
+
+    • refresh_expires_in: 0
+
+    • not-before-policy : 0
+
+    • scope             : "email profile user-context"
+
+which will be used for accessing SAFE data. The `token` object contains
+the token itself and, as you can see, when it expires (10 minutes after
+generation).
+
+To access the SAFE data, we first get the STAC item from the Sentinel-2
+collection. Its ID is the same as in the EOPF Sample Service STAC
+catalog example, with the suffix `.SAFE`. We’ll also set up timing how
+long this process takes in `safe_start`.
+
+``` r
+safe_start <- Sys.time()
+
+safe_id <- "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE"
+
+safe_item <- stac("https://catalogue.dataspace.copernicus.eu/stac/") |>
+  collections(collection_id = "SENTINEL-2") |>
+  items(feature_id = safe_id) |>
+  get_request()
+
+safe_item
+```
+
+    ###Item
+    - id: S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE
+    - collection: SENTINEL-2
+    - bbox: xmin: 10.31189, ymin: 46.83277, xmax: 11.80285, ymax: 47.84592
+    - datetime: 2025-05-30T10:15:59.024000Z
+    - assets: QUICKLOOK, PRODUCT
+    - item's fields: 
+    assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
+
+The relevant asset is “PRODUCT”:
+
+``` r
+safe_item |>
+  items_assets()
+```
+
+    [1] "QUICKLOOK" "PRODUCT"  
+
+We can select its URL for accessing the data:
+
+``` r
+safe_url <- safe_item |>
+  assets_select(asset_names = "PRODUCT") |>
+  assets_url()
+
+safe_url
+```
+
+    [1] "https://catalogue.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value"
+
+However, this URL actually redirects if we try to download the data, and
+the token is not properly passed. We must then first access the
+redirected URL. The following code sets up the API request via `httr2`’s
+`request()`, sets an option not to follow the redirect (so we can access
+the redirect URL manually), performs the request (via `req_perform()`),
+then accesses the new location from the header:
+
+``` r
+safe_redirect_url <- request(safe_url) |>
+  req_options(followlocation = FALSE) |>
+  req_perform() |>
+  resp_header("location")
+
+safe_redirect_url
+```
+
+    [1] "https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value"
+
+The difference in the URL is that it is prefixed with `download` instead
+of `catalogue`. Now, we can use this new URL to actually get the data.
+Again, we set up the request, this time adding in the token as a Bearer
+token so that we are authenticated and have permission to access the
+data. There is also error handling, which is informative in case the
+token has expired; in which case, the above OAuth token generation code
+should be rerun. Finally, we perform the request and safe it to a ZIP
+file, stored in `safe_zip`.
+
+    <httr2_response>
+
+    GET
+    https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value
+
+    Status: 200 OK
+
+    Content-Type: application/zip
+
+    Body: On disk
+    '/Users/sharla/Documents/Consulting/Sparkgeo/EOPF/eopf-tooling-guide/docs/tutorials/stac_zarr/R/scratch/safe/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE.zip'
+    (1259528508 bytes)
+
+``` r
+safe_dir <- tempdir()
+safe_zip <- paste0(safe_dir, "/", safe_id, ".zip")
+
+request(safe_redirect_url) |>
+  req_auth_bearer_token(token$access_token) |>
+  req_error(body = \(x) resp_body_json(x)[["message"]]) |>
+  req_perform(path = safe_zip)
+```
+
+We need to unzip the file and find the manifest file, which contains
+information on where different data sets are.
+
+``` r
+unzip(safe_zip, exdir = safe_dir)
+
+safe_unzip_dir <- paste0(safe_dir, "/", safe_id)
+
+safe_files <- tibble(path = dir_ls(safe_unzip_dir)) |>
+  mutate(file = basename(path)) |>
+  relocate(file, .before = path)
+
+safe_files
+```
+
+    # A tibble: 8 × 2
+      file                                                                path      
+      <chr>                                                               <fs::path>
+    1 DATASTRIP                                                           …DATASTRIP
+    2 GRANULE                                                             …E/GRANULE
+    3 HTML                                                                …SAFE/HTML
+    4 INSPIRE.xml                                                         …SPIRE.xml
+    5 MTD_MSIL2A.xml                                                      …SIL2A.xml
+    6 S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924-ql.jpg …24-ql.jpg
+    7 manifest.safe                                                       …fest.safe
+    8 rep_info                                                            …/rep_info
+
+``` r
+manifest_location <- safe_files |>
+  filter(file == "manifest.safe") |>
+  pull(path)
+```
+
+We then read in the manifest file, and find the location of the 60-metre
+resolution data.
+
+``` r
+manifest <- read_xml(manifest_location)
+
+safe_r60m_quicklook_location <- manifest |>
+  xml_find_first(".//dataObject[@ID='IMG_DATA_Band_TCI_60m_Tile1_Data']/byteStream/fileLocation") |>
+  xml_attr("href")
+
+safe_r60m_quicklook_location
+```
+
+    [1] "./GRANULE/L2A_T32TPT_A042991_20250530T101708/IMG_DATA/R60m/T32TPT_20250530T101559_TCI_60m.jp2"
+
+Which we can then read in and visualize:
+
+``` r
+safe_r60m_quicklook_location <- paste0(safe_unzip_dir, str_remove(safe_r60m_quicklook_location, "\\."))
+
+r60m_tci_safe <- read_stars(safe_r60m_quicklook_location) |>
+  st_rgb()
+
+r60m_tci_safe |>
+  plot()
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/safe-plot-1.png)
+
+``` r
+safe_end <- Sys.time()
+```
+
+## EOPF Zarr versus SAFE
+
+To contrast with the Zarr example, we’ll look at how long the processes
+took, how large the objects are, and how much data was saved to disk.
+
+First, to compare the time:
+
+    Time difference of 32.39 secs
+
+``` r
+zarr_end - zarr_start
+```
+
+    Time difference of 12.77 mins
+
+``` r
+safe_end - safe_start
+```
+
+``` r
+time_diff <- safe_time_numeric - zarr_time_numeric
+time_diff_min <- time_diff / 60
+```
+
+The EOPF Zarr example took 32.39, while the SAFE example took 12.77—a
+difference of -19.62 seconds, or -0.327 minutes.
+
+We can also compare the size of the objects in R:
+
+``` r
+obj_size(r60m_tci)
+```
+
+    9.77 MB
+
+``` r
+obj_size(r60m_tci_safe)
+```
+
+    45.99 MB
+
+The object from the SAFE example is nearly 5 times larger than the EOPF
+Zarr object.
+
+Finally, the SAFE example requires saving the entire archive to disk,
+while nothing is saved to disk in the Zarr example. The size of the full
+archive is:
+
+``` r
+file_size(safe_zip)
+```
+
+    1.17G
+
+while the size of the manifest file and the 60-metre resolution
+quicklook file are:
+
+``` r
+file_size(manifest_location)
+```
+
+    67.3K
+
+``` r
+file_size(safe_r60m_quicklook_location)
+```
+
+    3.57M
+
+So, of the 1.2595285^{9} saved to disk, only 3.81353^{6} was actually
+read in—only 0.3%.
+
+To summarise:
+
+    # A tibble: 2 × 5
+      Format    Time        `Downloaded to disk` `Download used` `Object size`
+      <chr>     <drtn>      <chr>                <chr>           <lbstr_by>   
+    1 EOPF Zarr  32.39 secs ---                  ---             100.88 MB    
+    2 SAFE      766.20 secs 1.17G                0.3%             45.99 MB    
