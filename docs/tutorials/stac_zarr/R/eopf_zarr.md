@@ -711,9 +711,16 @@ plot(owi_stars, main = "Wind Direction", as_points = FALSE, axes = TRUE, breaks 
 
 ## Sentinel-2
 
-TODO -\> explained other missions, should we explain this mission?
+For this example, we return to the [Sentinel-2 Level-2A
+Collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a).
+The Sentinel-2 mission is based on two satellites with 13 spectral
+bands, with four bands at 10-metre resolution, six bands at 20-metres
+resolution, and three bands at 60-metre resolution. The mission supports
+applications for land services, including the monitoring of vegetation,
+soil and water cover, as well as the observation of inland waterways and
+coastal areas.
 
-EOPF Zarr Assets include quicklook RGB composites, which are readily
+EOPF Zarr assets include quicklook RGB composites, which are readily
 viewable representations of the satellite image. We will open the
 10-metre resolution quicklook and visualise it. This is available as an
 asset, so we can access it directly from the STAC item.
