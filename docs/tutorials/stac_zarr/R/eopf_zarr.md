@@ -1191,8 +1191,8 @@ We then use this to generate a *token*:
 
 ``` r
 token <- oauth_client("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
-  id = "sh-62112dad-7f8c-4e1f-abc1-16cf93519302",
-  secret = "YrdqqqigqQ7630Ql6Ef6gxjU683j9M06",
+  id = Sys.getenv("CDSE_ID"),
+  secret = Sys.getenv("CDSE_SECRET")
 ) |>
   oauth_flow_client_credentials()
 
@@ -1205,7 +1205,7 @@ token
 
     • access_token      : <REDACTED>
 
-    • expires_at        : "2025-07-08 12:17:27"
+    • expires_at        : "2025-07-10 13:05:58"
 
     • refresh_expires_in: 0
 
