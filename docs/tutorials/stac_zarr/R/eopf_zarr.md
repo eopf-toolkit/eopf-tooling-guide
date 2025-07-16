@@ -33,7 +33,7 @@ into more detail on accessing and searching within the STAC catalog.
 # Prerequisites
 
 An R environment is required to follow this tutorial, with R version \>=
-4.1.0. We recommend using either
+4.4.0. We recommend using either
 [RStudio](https://posit.co/download/rstudio-desktop/) or
 [Positron](https://posit.co/products/ide/positron/) (or a cloud
 computing environment) and making use of [RStudio
@@ -222,7 +222,7 @@ r20m
     11 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
     12 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
 
-Then, we select the B02 array and examine its dimensions and chuning:
+Then, we select the B02 array and examine its dimensions and chunking:
 
 ``` r
 r20m |>

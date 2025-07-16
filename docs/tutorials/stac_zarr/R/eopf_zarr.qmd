@@ -33,7 +33,7 @@ This tutorial will explore how to access and analyse Zarr data from the [EOPF Sa
 
 # Prerequisites
 
-An R environment is required to follow this tutorial, with R version >= 4.1.0. We recommend using either [RStudio](https://posit.co/download/rstudio-desktop/) or [Positron](https://posit.co/products/ide/positron/) (or a cloud computing environment) and making use of [RStudio projects](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects) for a self-contained coding environment.
+An R environment is required to follow this tutorial, with R version >= 4.4.0. We recommend using either [RStudio](https://posit.co/download/rstudio-desktop/) or [Positron](https://posit.co/products/ide/positron/) (or a cloud computing environment) and making use of [RStudio projects](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects) for a self-contained coding environment.
 
 ## Dependencies
 
@@ -158,7 +158,7 @@ r20m <- zarr_store |>
 r20m
 ```
 
-Then, we select the B02 array and examine its dimensions and chuning:
+Then, we select the B02 array and examine its dimensions and chunking:
 
 ```{r array-info}
 r20m |>
