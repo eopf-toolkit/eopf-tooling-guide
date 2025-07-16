@@ -29,7 +29,7 @@ Zarr](../../stac_zarr.md) documentation.
 # Prerequisites
 
 An R environment is required to follow this tutorial, with R version \>=
-4.1.0. We recommend using either
+4.4.0. We recommend using either
 [RStudio](https://posit.co/download/rstudio-desktop/) or
 [Positron](https://posit.co/products/ide/positron/) (or a cloud
 computing environment) and making use of [RStudio
