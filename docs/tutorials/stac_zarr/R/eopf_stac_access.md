@@ -29,7 +29,7 @@ Zarr](../../stac_zarr.md) documentation.
 # Prerequisites
 
 An R environment is required to follow this tutorial, with R version \>=
-4.1.0. We recommend using either
+4.4.0. We recommend using either
 [RStudio](https://posit.co/download/rstudio-desktop/) or
 [Positron](https://posit.co/products/ide/positron/) (or a cloud
 computing environment) and making use of [RStudio
@@ -1156,5 +1156,5 @@ head(zarr_arrays, 3)
     $B02_10m$roles
     [1] "data"        "reflectance"
 
-This leads into our next tutorial, where the assets will be used to
-access and work with Zarr data.
+This leads into our [next tutorial](./eopf_zarr.md), where the assets
+will be used to access and work with Zarr data.

@@ -27,7 +27,7 @@ This tutorial will explore how to access the [EOPF Sample Service STAC catalog](
 
 # Prerequisites
 
-An R environment is required to follow this tutorial, with R version >= 4.1.0. We recommend using either [RStudio](https://posit.co/download/rstudio-desktop/) or [Positron](https://posit.co/products/ide/positron/) (or a cloud computing environment) and making use of [RStudio projects](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects) for a self-contained coding environment.
+An R environment is required to follow this tutorial, with R version >= 4.4.0. We recommend using either [RStudio](https://posit.co/download/rstudio-desktop/) or [Positron](https://posit.co/products/ide/positron/) (or a cloud computing environment) and making use of [RStudio projects](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects) for a self-contained coding environment.
 
 ## Dependencies
 
@@ -475,4 +475,4 @@ names(zarr_arrays)
 head(zarr_arrays, 3)
 ```
 
-This leads into our next tutorial, where the assets will be used to access and work with Zarr data. 
+This leads into our [next tutorial](/eopf_zarr.md), where the assets will be used to access and work with Zarr data. 

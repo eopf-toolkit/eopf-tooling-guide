@@ -1,0 +1,924 @@
+---
+title: "Access and analyse EOPF STAC Zarr data with R"
+format:
+  md:
+    df-print: tibble
+execute:
+  cache: true
+---
+
+# Table of Contents
+
+- [Introduction](#introduction)
+- [Prerequisites](#prerequisites)
+  - [Dependencies](#dependencies)
+  - [Fixes to the Rarr package](#fixes-to-the-rarr-package)
+- [Access Zarr data from the STAC catalog](#access-zarr-data-from-the-stac-catalog)
+- [Read Zarr data](#read-zarr-data)
+  - [Coordinates](#coordinates)
+  - [Different resolutions](#different-resolutions)
+- [Examples](#examples)
+  - [Sentinel-1](#sentinel-1)
+  - [Sentinel-2](#sentinel-2)
+  - [Sentinel-3](#sentinel-3)
+- [The benefits of EOPF Zarr over SAFE](#the-benefits-of-eopf-zarr-over-safe)
+  - [Zarr example](#zarr-example)
+  - [Safe example](#safe-example)
+  - [Comparisons](#comparisons)
+  
+  
+# Introduction
+
+This tutorial will explore how to access and analyse Zarr data from the [EOPF Sample Service STAC catalog](https://stac.browser.user.eopf.eodc.eu/) programmatically using R. It follows the [first tutorial](/eopf_stac_access.md), which goes into more detail on accessing and searching within the STAC catalog.
+
+# Prerequisites
+
+An R environment is required to follow this tutorial, with R version >= 4.4.0. We recommend using either [RStudio](https://posit.co/download/rstudio-desktop/) or [Positron](https://posit.co/products/ide/positron/) (or a cloud computing environment) and making use of [RStudio projects](https://support.posit.co/hc/en-us/articles/200526207-Using-RStudio-Projects) for a self-contained coding environment.
+
+## Dependencies
+
+We will use the following packages in this tutorial: [`rstac`](https://brazil-data-cube.github.io/rstac/) (for accessing the STAC catalog), [`tidyverse`](https://tidyverse.tidyverse.org/) (for data manipulation), [`stars`](https://r-spatial.github.io/stars/)) (for working with spatiotemporal data), and [`terra`](https://rspatial.github.io/terra/index.html) (for working with spatial data in raster format). You can install them directly from CRAN:
+
+```{r install}
+#| eval: false
+install.packages("rstac")
+install.packages("tidyverse")
+install.packages("stars")
+install.packages("terra")
+```
+
+We will also use the `Rarr` package to read Zarr data. It must be installed from Bioconductor, so first install the `BiocManager` package:
+
+```{r install-BiocManager}
+#| eval: false
+install.packages("BiocManager")
+```
+
+Then, use this package to install `Rarr`:
+
+```{r install-rarr}
+#| eval: false
+BiocManager::install("Rarr")
+```
+
+Finally, load the packages into your environment:
+
+```{r load, message=FALSE}
+#| cache: false
+library(rstac)
+library(tidyverse)
+library(Rarr)
+library(stars)
+library(terra)
+```
+
+## Fixes to the `Rarr` package
+
+We will use functions from the `Rarr` package to read and analyse Zarr data. Unfortunately, there is currently a bug in this package, causing it to parse the EOPF Sample Service data URLs incorrectly -- it has been fixed and will be updated in the next release of `Rarr`. In the meantime, we will write our own version of this URL parsing function and use it instead of the one in `Rarr`.
+
+```{r overwrite-url-parsing}
+#| cache: false
+.url_parse_other <- function(url) {
+  parsed_url <- httr::parse_url(url)
+  bucket <- gsub(
+    x = parsed_url$path, pattern = "^/?([[a-z0-9\\:\\.-]*)/.*",
+    replacement = "\\1", ignore.case = TRUE
+  )
+  object <- gsub(
+    x = parsed_url$path, pattern = "^/?([a-z0-9\\:\\.-]*)/(.*)",
+    replacement = "\\2", ignore.case = TRUE
+  )
+  hostname <- paste0(parsed_url$scheme, "://", parsed_url$hostname)
+
+  if (!is.null(parsed_url$port)) {
+    hostname <- paste0(hostname, ":", parsed_url$port)
+  }
+
+  res <- list(
+    bucket = bucket,
+    object = object,
+    region = "auto",
+    hostname = hostname
+  )
+  return(res)
+}
+
+assignInNamespace(".url_parse_other", .url_parse_other, ns = "Rarr")
+```
+
+This function overwrites the existing one in `Rarr`, and allows us to continue with the analysis.
+
+If you try to run some of the examples below and receive a timeout error, please ensure that you have run the above code block.
+
+# Access Zarr data from the STAC Catalog
+
+The first step of accessing Zarr data is to understand the assets within the EOPF Sample Service STAC catalog. The [first tutorial](/eopf_stac_access.md) goes into detail on this, so we recommend reviewing it if you have not already.
+
+For the first part of this tutorial, we will be using data from the [Sentinel-2 Level-2A Collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a). We fetch the "product" asset under a given item, and can look at its URL:
+
+```{r access-stac-product}
+s2_l2a_item <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-2-l2a") |>
+  items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") |>
+  get_request()
+
+s2_l2a_product <- s2_l2a_item |>
+  assets_select(asset_names = "product")
+
+s2_l2a_product_url <- s2_l2a_product |>
+  assets_url()
+
+s2_l2a_product_url
+```
+
+The product is the "top level" Zarr asset, which contains the full Zarr product hierarchy. We can use `zarr_overview()` to get an overview of it, setting `as_data_frame` to `TRUE` so that we can see the entries in a data frame instead of printed directly to the console. Each entry is a Zarr array; we remove `product_url` from the path to get a better idea of what each array is. Since this is something we will want to do multiple times throughout the tutorial, we create a helper function for this.
+
+```{r overview}
+derive_store_array <- function(store, product_url) {
+  store |>
+    mutate(array = str_remove(path, product_url)) |>
+    relocate(array, .before = path)
+}
+
+zarr_store <- s2_l2a_product_url |>
+  zarr_overview(as_data_frame = TRUE) |>
+  derive_store_array(s2_l2a_product_url)
+
+zarr_store
+```
+
+This shows us the path to access the Zarr array, the number of chunks it contains, the type of data, as well as its dimensions and chunking structure.
+
+We can also look at overviews of individual arrays. First, let's narrow down to measurements taken at 20-metre resolution:
+
+```{r measurements-20m}
+r20m <- zarr_store |>
+  filter(str_starts(array, "/measurements/reflectance/r20m/"))
+
+r20m
+```
+
+Then, we select the B02 array and examine its dimensions and chunking:
+
+```{r array-info}
+r20m |>
+  filter(str_ends(array, "b02")) |>
+  select(path, nchunks, dim, chunk_dim) |>
+  as.list()
+```
+
+
+We can also see an overview of individual arrays using `zarr_overview()`. With the default setting (where `as_data_frame` is `FALSE`), this prints information on the array directly to the console, in a more digestible way:
+
+```{r array-overview}
+r20m_b02 <- r20m |>
+  filter(str_ends(array, "b02")) |>
+  pull(path)
+
+r20m_b02 |>
+  zarr_overview()
+```
+
+The above overview tells us that the data is two-dimensional, with dimensions 5490 x 5490. Zarr data is split up into **chunks**, which are smaller, independent piece of the larger array. Chunks can be accessed individually, without loading the entire array. In this case, there are 36 chunks in total, with 6 along each of the dimensions, each of size 915 x 915.
+
+# Read Zarr data
+
+To read in Zarr data, we use `read_zarr_array()`, and can pass a list to the `index` argument, describing which elements we want to extract along each dimension. Since this array is two-dimensional, we can think of the dimensions as rows and columns of the data. For example, to select the first 10 rows and the first 5 columns:
+
+```{r read-array-index}
+r20m_b02 |>
+  read_zarr_array(index = list(1:10, 1:5))
+```
+
+## Coordinates
+
+Similarly, we can read in the `x` and `y` coordinates corresponding to data at 10m resolution. These `x` and `y` coordinates do not correspond to latitude and longitude---to understand the coordinate reference system used in each data set, we access the `proj:code` property of the STAC item. In this case, the coordinate reference system is [EPSG:32626](https://epsg.io/32626), which represents metres from the UTM zone's origin.
+
+```{r item-proj}
+s2_l2a_item[["properties"]][["proj:code"]]
+```
+
+We can see that `x` and `y` are one dimensional:
+
+```{r x-y-dims}
+r20m_x <- r20m |>
+  filter(str_ends(array, "x")) |>
+  pull(path)
+
+r20m_x |>
+  zarr_overview()
+
+r20m_y <- r20m |>
+  filter(str_ends(array, "y")) |>
+  pull(path)
+
+r20m_y |>
+  zarr_overview()
+```
+
+Which means that, when combined, they form a grid that describes the location of each point in the 2-dimensional measurements, such as B02. We will go into this more in the examples below.
+
+The `x` and `y` dimensions can be read in using the same logic: by describing which elements we want to extract. Since there is only one dimension, we only need to supply one entry in the indexing list:
+
+```{r x-read-index}
+r20m_x |>
+  read_zarr_array(list(1:5))
+```
+
+Or, we can read in the whole array (by not providing any elements to `index`) and view its first few values with `head()`. Of course, reading in the whole array, rather than a small section of it, will take longer.
+
+```{r x-y-read-head}
+r20m_x |>
+  read_zarr_array() |>
+  head(5)
+
+r20m_y |>
+  read_zarr_array() |>
+  head(5)
+```
+
+## Different resolutions
+
+With EOPF data, some measurements are available at multiple resolutions. For example, we can see that the B02 spectral band is available at 10m, 20m, and 60m resolution:
+
+```{r b02-resolutions}
+b02 <- zarr_store |>
+  filter(str_starts(array, "/measurements/reflectance"), str_ends(array, "b02"))
+
+b02 |>
+  select(array)
+```
+
+The resolution affects the dimensions of the data: when measurements are taken at a higher resolution, there will be more data. We can see here that there is more data for the 10m resolution than the 20m resolution (recall, its dimensions are 5490 x 5490), and less for the 60m resolution:
+
+```{r b02-resolutions-dims}
+b02 |>
+  filter(array == "/measurements/reflectance/r10m/b02") |>
+  pull(dim)
+
+b02 |>
+  filter(array == "/measurements/reflectance/r60m/b02") |>
+  pull(dim)
+```
+
+# Examples
+
+The following sections show examples from each of the Sentinel missions.
+
+## Sentinel-1
+
+The first example looks at [Sentinel-1 Level 2 Ocean (OCN) data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn), which consists of data for oceanographic study, such as monitoring sea surface conditions, detecting oil spills, and studying ocean currents. This example will show how to access and plot Wind Direction data.
+
+First, select the relevant collection and item from STAC:
+
+```{r sentinel-1-stac}
+l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-1-l2-ocn") |>
+  items(feature_id = "S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971") |>
+  get_request()
+
+l2_ocn
+```
+
+We can look at each of the assets' titles to understand what the item contains:
+
+```{r l2-ocn-assets}
+l2_ocn |>
+  pluck("assets") |>
+  map("title")
+```
+
+We are interested in the "Ocean Wind field" data, and will hold onto the `owi` key for now.
+
+To access all of the `owi` data, we get the "product" asset and then the full Zarr store, again using our helper function to extract array information from the full array path:
+
+```{r l2-ocn-store}
+l2_ocn_url <- l2_ocn |>
+  assets_select(asset_names = "product") |>
+  assets_url()
+
+l2_ocn_store <- l2_ocn_url |>
+  zarr_overview(as_data_frame = TRUE) |>
+  derive_store_array(l2_ocn_url)
+
+l2_ocn_store
+```
+
+Next, we filter to access `owi` measurement data only:
+
+```{r owi-filter}
+l2_ocn_store |>
+  filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
+```
+
+Since all of these arrays start with `/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/`, we can remove that to get a clearer idea of what each array is:
+
+```{r owi-arrays}
+owi <- l2_ocn_store |>
+  filter(str_starts(array, "/owi"), str_detect(array, "measurements")) |>
+  mutate(array = str_remove(array, "/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/"))
+
+owi
+```
+
+We are interested in `wind_direction`, as well as the coordinate arrays (`latitude` and `longitude`). We can get an overview of the arrays' dimensions and structures:
+
+```{r owi-overview}
+owi |>
+  filter(array == "wind_direction") |>
+  pull(path) |>
+  zarr_overview()
+
+owi |>
+  filter(array == "latitude") |>
+  pull(path) |>
+  zarr_overview()
+
+owi |>
+  filter(array == "longitude") |>
+  pull(path) |>
+  zarr_overview()
+```
+
+Here, we can see that all of the arrays are of the same shape: 167 x 255, with only one chunk. Since these are small, we can read all of the data in at once.
+
+```{r owi-read}
+owi_wind_direction <- owi |>
+  filter(array == "wind_direction") |>
+  pull(path) |>
+  read_zarr_array()
+
+owi_wind_direction[1:5, 1:5]
+
+owi_lat <- owi |>
+  filter(array == "latitude") |>
+  pull(path) |>
+  read_zarr_array()
+
+owi_lat[1:5, 1:5]
+
+owi_long <- owi |>
+  filter(array == "longitude") |>
+  pull(path) |>
+  read_zarr_array()
+
+owi_lat[1:5, 1:5]
+```
+
+Note that both `longitude` and `latitude` are 2-dimensional arrays, and they are not evenly spaced. Rather, the data grid is **curvilinear** --- it has grid lines that are not straight, and there is a longitude and latitude for every pixel of the other layers (i.e., `wind_direction`). This format is very common in satellite data.
+
+We use functions from the `stars` package, loaded earlier, to format the data for visualisation. `stars` is specifically designed for reading, manipulating, and plotting spatiotemporal data, such as satellite data.
+
+The function `st_as_stars()` is used to get our data into the correct format for visualisation:
+
+```{r owi-format}
+owi_stars <- st_as_stars(wind_direction = owi_wind_direction) |>
+  st_as_stars(curvilinear = list(X1 = owi_long, X2 = owi_lat))
+```
+
+Getting the data into this format is also beneficial because it allows for a quick summary of the data and its attributes, providing information such as the median and mean `wind_direction`, the number of `NA`s, and information on the grid:
+
+```{r owi-format-show}
+owi_stars
+```
+
+Finally, we can plot this object:
+
+```{r owi-plot}
+plot(owi_stars, main = "Wind Direction", as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
+```
+
+## Sentinel-2
+
+For this example, we return to the [Sentinel-2 Level-2A Collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a). The Sentinel-2 mission is based on two satellites with 13 spectral bands, with four bands at 10-metre resolution, six bands at 20-metres resolution, and three bands at 60-metre resolution. The mission supports applications for land services, including the monitoring of vegetation, soil and water cover, as well as the observation of inland waterways and coastal areas.
+
+EOPF Zarr assets include quicklook RGB composites, which are readily viewable representations of the satellite image. We will open the 10-metre resolution quicklook and visualise it. This is available as an asset, so we can access it directly from the STAC item.
+
+```{r tci-10m-asset}
+tci_10m_asset <- s2_l2a_item |>
+  assets_select(asset_names = "TCI_10m")
+
+tci_10m_url <- tci_10m_asset |>
+  assets_url()
+
+tci_10m_url |>
+  zarr_overview()
+```
+
+From the overview, we can see that the quicklook array has three dimensions to it, each of size 10980 x 10980. The three dimensions correspond to red, green, and blue spectral bands (B04, B03, and B02, respectively), since this is an RGB composite. This information is also available by looking at the assets' bands:
+
+```{r tci-10m-bands}
+s2_l2a_item[["assets"]][["TCI_10m"]][["bands"]] |>
+  map_dfr(as_tibble)
+```
+
+We can read in a small chunk of the array to get an idea of its shape, using the same indexing process we've used before. Note that we want to select _all_ of the bands (the first dimension listed). Rather than writing `1:3`, we can simply use `NULL` as the first dimension, indicating to get all data at this dimension. To preview the data, we will just get the first 2 entries (in each dimension) along the three bands.
+
+```{r tci-10m-preview}
+tci_10m_preview <- tci_10m_url |>
+  read_zarr_array(list(NULL, 1:2, 1:2))
+
+tci_10m_preview
+```
+
+For visualisation purposes, we need the data in a different configuration --- note the dimensions of the data:
+
+```{r tci-10m-preview-dims}
+dim(tci_10m_preview)
+```
+
+Instead, we need to get it into e.g. 2 x 2 x 3, with the _third_ dimension reflecting the number of bands (or layers) To do this, we use the `aperm()` function to transpose an array, with argument `c(2, 3, 1)` -- moving the second dimension to the first, the third to the second, and the first to the third. Then, we can see that the dimensions of the array are correct:
+
+```{r tci-10m-preview-transf}
+tci_10m_preview_perm <- tci_10m_preview |>
+  aperm(c(2, 3, 1))
+
+tci_10m_preview_perm
+
+dim(tci_10m_preview_perm)
+```
+
+Let's read in the full TCI array to visualise it.
+
+```{r tci-10m-dims}
+tci_10m <- tci_10m_url |>
+  read_zarr_array()
+
+tci_10m_perm <- tci_10m |>
+  aperm(c(2, 3, 1))
+
+dim(tci_10m)
+```
+
+For visualisation, we use `terra`'s `plotRGB()` function, first converting the array into a raster object with `rast()`:
+
+```{r tci-10m-vis}
+tci_10m_perm |>
+  rast() |>
+  plotRGB()
+```
+
+We can do the same with the quicklook at the 60-metre resolution, showing the full visualisation process in a single step:
+
+```{r tci-60m-vis}
+zarr_store |>
+  filter(array == "/quality/l2a_quicklook/r60m/tci") |>
+  pull(path) |>
+  read_zarr_array() |>
+  aperm(c(2, 3, 1)) |>
+  rast() |>
+  plotRGB()
+```
+
+## Sentinel-3
+
+Finally, we look at an example from the Sentinel-3 mission. The Sentinel-3 mission measures sea-surface topography and land- and sea-surface temperature and colour, in support of environmental and climate monitoring. The [Sentinel-3 OLCI L2 LFR](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-3-olci-l2-lfr?.language=en) product provides this data, computed for full resolution.
+
+Again, we will access a specific item from this collection:
+
+```{r gifapar-item}
+l2_lfr <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-3-olci-l2-lfr") |>
+  items(feature_id = "S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003") |>
+  get_request()
+
+l2_lfr
+```
+
+To access all of the data, we get the "product" asset and then the full Zarr store, again using our helper function to extract array information from the full array path:
+
+```{r gifapar-store}
+l2_lfr_url <- l2_lfr |>
+  assets_select(asset_names = "product") |>
+  assets_url()
+
+l2_lfr_store <- l2_lfr_url |>
+  zarr_overview(as_data_frame = TRUE) |>
+  derive_store_array(l2_lfr_url)
+
+l2_lfr_store
+```
+
+Next, we filter to access measurement data only:
+
+```{r gifapar-measurements}
+l2_lfr_measurements <- l2_lfr_store |>
+  filter(str_starts(array, "/measurements")) |>
+  mutate(array = str_remove(array, "/measurements/"))
+
+l2_lfr_measurements
+```
+
+Of these, we are interested in `gifapar` as well as `longitude` and `latitude`. We can get an overview of the arrays’ dimensions and structures:
+
+```{r gifapar-overview}
+l2_lfr_measurements |>
+  filter(array == "gifapar") |>
+  pull(path) |>
+  zarr_overview()
+
+l2_lfr_measurements |>
+  filter(array == "longitude") |>
+  pull(path) |>
+  zarr_overview()
+
+l2_lfr_measurements |>
+  filter(array == "latitude") |>
+  pull(path) |>
+  zarr_overview()
+```
+
+Similar to the previous example, we can see that all of the arrays are of the same shape: 4091 x 4865. We read in all of the arrays:
+
+```{r gifapar-read}
+gifapar <- l2_lfr_measurements |>
+  filter(array == "gifapar") |>
+  pull(path) |>
+  read_zarr_array()
+
+gifapar_long <- l2_lfr_measurements |>
+  filter(array == "longitude") |>
+  pull(path) |>
+  read_zarr_array()
+
+gifapar_long[1:5, 1:5]
+
+gifapar_lat <- l2_lfr_measurements |>
+  filter(array == "latitude") |>
+  pull(path) |>
+  read_zarr_array()
+
+gifapar_lat[1:5, 1:5]
+```
+
+Again, both `longitude` and `latitude` are unevenly spaced 2-dimensional arrays. This tells us that the data grid is curvilinear, and we use `st_as_stars()` to get our data into the correct format for visualisation:
+
+```{r gifapar-stars}
+gifapar_stars <- st_as_stars(gifapar = gifapar) |>
+  st_as_stars(curvilinear = list(X1 = gifapar_long, X2 = gifapar_lat))
+
+gifapar_stars
+``` 
+
+Finally, we plot the GIFAPAR:
+
+```{r gifapar-plot}
+#| message: false
+plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
+```
+
+# The benefits of EOPF Zarr over SAFE
+
+Prior to the introduction of EOPF's Zarr, the ESA's Copernicus data was published and distributed using the [Standard Archive Format for Europe (SAFE)](https://earth.esa.int/eogateway/activities/safe-the-standard-archive-format-for-europe). Sentinel scenes were downloaded as zip archives, containing several files as well as an XML manifest. In order to access any scene data, the entire zip archive had to be downloaded, which could be quite inefficient.
+
+Zarr is optimised for efficient data retrieval---arrays are segmented into one or more chunks, and a single Sentinel scene could potentially be across several chunks. A data consumer can choose to download only the chunks required for their use case, rather than the entire zip archive. There is no need to download all data before processing it, and data can be **lazy-loaded** so that it is only downloaded when required. The [Comparisons](#comparisons) section shows how this is more efficient in terms of both network bandwidth and compute resources.
+
+The following section will contrast the processes for working with EOPF Zarr versus the SAFE format, showing that Zarr takes less code, time, and downloads less data.
+
+## Zarr example
+
+This example how to access the 60-metre resolution quicklook of a Sentinel-2 mission, explored in more detail [above](#sentinel-2). We set up `zarr_start` and `zarr_end` to time the data retrieval and visualisation process, for comparison to the SAFE process later on.
+
+```{r zarr-ex}
+zarr_start <- Sys.time()
+
+s2_l2a_item <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-2-l2a") |>
+  items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") |>
+  get_request()
+
+s2_l2a_product <- s2_l2a_item |>
+  assets_select(asset_names = "product")
+
+s2_l2a_product_url <- s2_l2a_product |>
+  assets_url()
+
+zarr_store <- s2_l2a_product_url |>
+  zarr_overview(as_data_frame = TRUE) |>
+  mutate(array = str_remove(path, s2_l2a_product_url)) |>
+  relocate(array, .before = path)
+
+r60m_tci <- zarr_store |>
+  filter(array == "/quality/l2a_quicklook/r60m/tci") |>
+  pull(path) |>
+  read_zarr_array()
+
+r60m_tci <- r60m_tci |>
+  aperm(c(2, 3, 1)) |>
+  rast()
+
+r60m_tci |>
+  plotRGB()
+
+zarr_end <- Sys.time()
+```
+
+## SAFE example
+
+The following example accesses the same 60-metre quicklook image as the example above, using SAFE instead of EOPF Zarr.
+
+For this portion of the tutorial, we also require [`httr2`](https://httr2.r-lib.org/) (for working with APIs), [`xml2`](https://xml2.r-lib.org) (for accessing metadata from SAFE files), [`fs`](https://fs.r-lib.org/) (for accessing file locations and sizes), and [`lobstr`](https://lobstr.r-lib.org) (for calculating the size of objects within R). You can install them directly from CRAN. Note that `xml2` is a part of `tidyverse`, so it does not need to be installed separately, but it will be loaded separately.
+
+```{r install-additional}
+#| eval: false
+install.packages("httr2")
+install.packages("fs")
+install.packages("lobstr")
+```
+
+```{r load-additional}
+#| cache: false
+#| message: false
+library(httr2)
+library(xml2)
+library(fs)
+library(lobstr)
+```
+
+This example also requires authentication to the SAFE STAC API. You need a [Copernicus Dataspace](https://dataspace.copernicus.eu/)
+account, and to register an OAuth 2.0 client, as described in [this article](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/Authentication.html). The resulting Client Credentials should be stored in the environment variables `CDSE_ID` and `CDSE_SECRET` (using e.g. `usethis::edit_r_environ()` to set these).
+
+We then use this to generate a *token*:
+
+```{r client-token}
+token <- oauth_client("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
+  id = Sys.getenv("CDSE_ID"),
+  secret = Sys.getenv("CDSE_SECRET")
+) |>
+  oauth_flow_client_credentials()
+
+token
+```
+
+which will be used for accessing SAFE data. The `token` object contains the token itself and, as you can see, when it expires (10 minutes after generation).
+
+To access the SAFE data, we first get the STAC item from the Sentinel-2 collection. Its ID is the same as in the EOPF Sample Service STAC catalog example, with the suffix `.SAFE`. We'll also set up timing how long this process takes, in `safe_start`.
+
+```{r safe-item}
+safe_start <- Sys.time()
+
+safe_id <- "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE"
+
+safe_item <- stac("https://catalogue.dataspace.copernicus.eu/stac/") |>
+  collections(collection_id = "SENTINEL-2") |>
+  items(feature_id = safe_id) |>
+  get_request()
+
+safe_item
+```
+
+The relevant asset is "PRODUCT":
+
+```{r safe-asset}
+safe_item |>
+  items_assets()
+```
+
+We can select its URL for accessing the data:
+
+```{r safe-product-url}
+safe_url <- safe_item |>
+  assets_select(asset_names = "PRODUCT") |>
+  assets_url()
+
+safe_url
+```
+
+However, this URL actually *redirects* if we try to download the data, and the token is not properly passed. We must then first access the redirected URL. The following code sets up the API request via `httr2`'s `request()`, sets an option not to follow the redirect (so we can access the redirect URL manually), performs the request (via `req_perform()`), then accesses the new location from the header:
+
+```{r safe-product-redirect}
+safe_redirect_url <- request(safe_url) |>
+  req_options(followlocation = FALSE) |>
+  req_perform() |>
+  resp_header("location")
+
+safe_redirect_url
+```
+
+The difference in the URL is that it is prefixed with `download` instead of `catalogue`. Now, we can use this new URL to actually get the data. Again, we set up the request, this time adding in the token as a Bearer token so that we are authenticated and have permission to access the data. There is also error handling, which is informative in case the token has expired; in which case, the above OAuth token generation code should be rerun. Finally, we perform the request and safe it to a ZIP file, stored in `safe_zip`.
+
+```{r safe-get-show}
+#| eval: false
+safe_dir <- tempdir()
+safe_zip <- paste0(safe_dir, "/", safe_id, ".zip")
+
+request(safe_redirect_url) |>
+  req_auth_bearer_token(token$access_token) |>
+  req_error(body = \(x) resp_body_json(x)[["message"]]) |>
+  req_perform(path = safe_zip)
+```
+
+```{r safe-get-hide}
+#| echo: false
+# in non-temp dir for interactive development
+safe_dir <- here::here("scratch", "safe")
+safe_zip <- paste0(safe_dir, "/", safe_id, ".zip")
+
+# if (!file_exists(safe_zip)) {
+request(safe_redirect_url) |>
+  req_auth_bearer_token(token$access_token) |>
+  req_error(body = \(x) resp_body_json(x)[["message"]]) |>
+  req_perform(path = safe_zip)
+# }
+```
+
+```
+<httr2_response>
+
+GET
+https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value
+
+Status: 200 OK
+
+Content-Type: application/zip
+
+Body: On disk
+(1259528508 bytes)
+```
+
+We need to unzip the file and find the manifest file, which contains information on where different data sets are.
+
+```{r safe-unzip-find}
+unzip(safe_zip, exdir = safe_dir)
+
+safe_unzip_dir <- paste0(safe_dir, "/", safe_id)
+
+safe_files <- tibble(path = dir_ls(safe_unzip_dir)) |>
+  mutate(file = basename(path)) |>
+  relocate(file, .before = path)
+
+safe_files
+
+manifest_location <- safe_files |>
+  filter(file == "manifest.safe") |>
+  pull(path)
+```
+
+We then read in the manifest file, and find the location of the 60-metre resolution data.
+
+```{r safe-manifest}
+manifest <- read_xml(manifest_location)
+
+safe_r60m_quicklook_location <- manifest |>
+  xml_find_first(".//dataObject[@ID='IMG_DATA_Band_TCI_60m_Tile1_Data']/byteStream/fileLocation") |>
+  xml_attr("href")
+
+safe_r60m_quicklook_location
+```
+
+Which we can then read in and visualize:
+
+```{r safe-plot}
+#| message: false
+safe_r60m_quicklook_location <- paste0(safe_unzip_dir, str_remove(safe_r60m_quicklook_location, "\\."))
+
+r60m_tci_safe <- read_stars(safe_r60m_quicklook_location) |>
+  st_rgb()
+
+r60m_tci_safe |>
+  plot()
+
+safe_end <- Sys.time()
+```
+
+## Comparisons
+
+To contrast with the Zarr example, we'll look at how long the processes took, how large the objects are, and how much data was saved to disk.
+
+First, to compare the time:
+
+```{r time-comparison-zarr-show}
+#| eval: false
+zarr_end - zarr_start
+```
+
+```{r time-comparison-zarr-hide}
+#| echo: false
+zarr_time <- round(zarr_end - zarr_start, 2)
+zarr_time_numeric <- as.numeric(zarr_time)
+
+zarr_time
+```
+
+```{r time-comparison-safe-show}
+#| eval: false
+safe_end - safe_start
+```
+
+```{r time-comparison-safe-hide}
+#| echo: false
+safe_time <- round(safe_end - safe_start, 2)
+safe_time_numeric <- as.numeric(safe_time)
+
+safe_time
+```
+
+```{r time-comparison-hide}
+time_diff <- (safe_time_numeric * 60) - zarr_time_numeric
+time_diff_min <- round(time_diff / 60, 2)
+```
+
+The EOPF Zarr example took `r zarr_time_numeric` seconds, while the SAFE example took `r safe_time_numeric` minutes---a difference of `r time_diff` seconds, or `r time_diff_min` minutes.
+
+We can also compare the size of the objects in R:
+
+```{r object-size-zarr-show}
+#| eval: false
+obj_size(r60m_tci)
+```
+
+```{r object-size-zarr-hide}
+#| echo: false
+zarr_size <- obj_size(r60m_tci)
+zarr_size
+```
+
+```{r object-size-safe-show}
+#| eval: false
+obj_size(r60m_tci_safe)
+```
+
+```{r object-size-safe-hide}
+#| echo: false
+safe_size <- obj_size(r60m_tci_safe)
+safe_size
+```
+
+The object from the SAFE example is nearly 5 times larger than the EOPF Zarr object.
+
+Finally, the SAFE example requires saving the entire archive to disk, while nothing is saved to disk in the Zarr example. The size of the full archive is:
+
+```{r safe-disk-size-show}
+#| eval: false
+file_size(safe_zip)
+```
+
+```{r safe-disk-size-hide}
+#| echo: false
+safe_zip_size <- file_size(safe_zip)
+safe_zip_size
+```
+
+while the size of the manifest file and the 60-metre resolution quicklook file are:
+
+```{r safe-manifest-size-show}
+#| eval: false
+file_size(manifest_location)
+```
+
+```{r safe-manifest-size-hide}
+#| echo: false
+manifest_size <- file_size(manifest_location)
+
+manifest_size
+```
+
+```{r safe-quicklook-size-show}
+#| eval: false
+file_size(safe_r60m_quicklook_location)
+```
+
+```{r safe-quicklook-size-hide}
+#| echo: false
+quicklook_size <- file_size(safe_r60m_quicklook_location)
+
+total_used_size <- manifest_size + quicklook_size
+
+total_used_percent <- paste0(round(as.numeric(total_used_size) / as.numeric(safe_zip_size) * 100, 2), "%")
+
+quicklook_size
+```
+
+So, of the 1.17 GB saved to disk, only `r total_used_percent` was actually used.
+
+To summarise:
+
+```{r summary-table}
+#| echo: false
+tribble(
+  ~Format, ~`Time`, ~`Downloaded to disk`, ~`Download used`, ~`Object size`,
+  "EOPF Zarr", zarr_time, "---", "---", zarr_size,
+  "SAFE", safe_time, as.character(safe_zip_size), total_used_percent, safe_size
+) |>
+  knitr::kable()
+```
+
+## Optimisations
+
+The transition from SAFE to EOPF Zarr presents opportunities for optimisations that may affect the data provider (ESA), the data consumer, or both.
+
+### Chunk Size
+
+Zarr supports configurable chunk sizes for array data. A Zarr store may contain many n-dimensional arrays and each can support a unique chunk size. Each array will comprise one or more chunks of this size.
+
+Chunk size is determined by the data provider and, ideally, is configured such that the chunks downloaded by a data consumer to satisfy a given use-case include minimal extraneous data.
+
+### STAC Metadata and Zarr
+
+The relationship between STAC metadata and Zarr stores is a source of discussion and a number of different strategies are available, each with differing advantages and disadvantages. Additional context on this subject can be found in the [Cloud-Optimized Geospatial Formats Guide](https://guide.cloudnativegeo.org/cookbooks/zarr-stac-report/#new-approaches).
+
+The approach adopted for STAC metadata in the EOPF Sample STAC Service most closely aligns to the [many smaller Zarr stores](https://guide.cloudnativegeo.org/cookbooks/zarr-stac-report/#many-smaller-zarr-stores) approach.
+
+### Memory Limitations
+
+If a use case requires more memory than the data consumer can support, even after optimisation efforts, it may be necessary to use a cloud-hosted compute environment with access to a larger pool of compute resources.
