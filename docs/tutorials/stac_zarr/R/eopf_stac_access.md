@@ -395,10 +395,8 @@ sentinel_2_l2a_first_item[["properties"]] |>
     [37] "sat:platform_international_designator"
 
 The introductory tutorial [further explains the metadata
-properties](https://github.com/eopf-toolkit/eopf-tooling-guide/blob/EOPF-47/docs/tutorials/stac_zarr.md#eopf-and-stac-extensions)
+properties](../../stac_zarr.md#eopf-and-stac-extensions)
 and their extensions.
-
-(TODO – link on main branch once EOPF-47 is merged)
 
 For example, the EOPF instrument mode:
 
