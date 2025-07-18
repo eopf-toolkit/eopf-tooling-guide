@@ -6,6 +6,32 @@ An [earlier version](https://github.com/eopf-toolkit/eopf-tooling-guide/blob/ccd
 
 -----
 
+## Overview / TL;DR
+
+This document can be summarised as follows.
+
+> [!NOTE]
+> "Standard QGIS" refers to a recent release of QGIS, without any non-standard QGIS or GDAL plugins, and using the GUI only (no pyQGIS).
+
+A number of obstacles prevent integration of EOPF Zarr in standard QGIS via EOPF STAC metadata:
+
+1. Standard QGIS cannot successfully load Zarr data from a hosted location such as `https://...`
+2. EOPF Zarr spatial reference metadata is not directly compatible with GDAL and therefore QGIS. If EOPF Zarr data can be loaded it will have an invalid spatial reference.
+3. QGIS STAC functionality does not recognise Zarr as a cloud-optimised format and therefore does not support adding Zarr assets from STAC items. Also QGIS STAC functionality fails to download Zarr assets.
+
+Additional factors might limit how well EOPF Zarr in QGIS via EOPF STAC is received by the community:
+
+4. EOPF STAC metadata promotes _some_ arrays as STAC item assets unintuitively. Users require a base level of expertise in EOPF Zarr store structure to work well with this data.
+5. GDAL appears to have limited lazy-loading support for Zarr data and may exhibit poor performance with larger Zarr stores.
+
+The GDAL EOPF plugin (in development) addresses obstacle 2 and partially addresses obstacle 1. A planned change in the plugin aims to address obstacle 5. The plugin's roadmap and potential are not currently well understood. If this plugin cannot be used as part of a standard EOPF Zarr workflow then changes may be required in QGIS, GDAL, or both to address obstacles 1, 2, and 5.
+
+Changes will be required in QGIS to address obstacle 3.
+
+Changes will be required in EOPF STAC metadata to address obstacle 4.
+
+-----
+
 ## GDAL EOPF Plugin
 
 This document makes several references to the [GDAL EOPF plugin](https://github.com/EOPF-Sample-Service/GDAL-ZARR-EOPF). This plugin is under active development and appears to be changing rapidly. It is possible that this plugin will be central to integration of EOPF Zarr data in QGIS via STAC. Due to this plugin's ongoing development the content of this document may quickly become outdated and key concerns may be presented or addressed unexpectedly. An [earlier version](https://github.com/eopf-toolkit/eopf-tooling-guide/blob/ccda97d22435e8d2872558b4e4c5e2c893b37490/research/qgis-stac-eopf-integration/summary.md) of this document dismissed the plugin as being immature, but the project has since advanced significantly. 
