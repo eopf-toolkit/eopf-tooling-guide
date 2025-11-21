@@ -47,7 +47,7 @@ install.packages("stars")
 install.packages("terra")
 ```
 
-We will also use the `Rarr` package (version >= 1.10.0) to read Zarr data. It must be installed from Bioconductor, so first install the `BiocManager` package:
+We will also use the `Rarr` package (version >= 1.10.1) to read Zarr data. It must be installed from Bioconductor, so first install the `BiocManager` package:
 
 ```{r install-BiocManager}
 #| eval: false
@@ -81,7 +81,7 @@ For the first part of this tutorial, we will be using data from the [Sentinel-2 
 ```{r access-stac-product}
 s2_l2a_item <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-2-l2a") |>
-  items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") |>
+  items(feature_id = "S2A_MSIL2A_20251107T100231_N0511_R122_T33UXP_20251107T113811") |>
   get_request()
 
 s2_l2a_product <- s2_l2a_item |>
@@ -236,7 +236,7 @@ First, select the relevant collection and item from STAC:
 ```{r sentinel-1-stac}
 l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-1-l2-ocn") |>
-  items(feature_id = "S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971") |>
+  items(feature_id = "S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E") |>
   get_request()
 
 l2_ocn
@@ -273,12 +273,12 @@ l2_ocn_store |>
   filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
 ```
 
-Since all of these arrays start with `/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/`, we can remove that to get a clearer idea of what each array is:
+Since all of these arrays start with `/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/`, we can remove that to get a clearer idea of what each array is:
 
 ```{r owi-arrays}
 owi <- l2_ocn_store |>
   filter(str_starts(array, "/owi"), str_detect(array, "measurements")) |>
-  mutate(array = str_remove(array, "/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/"))
+  mutate(array = str_remove(array, "/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/"))
 
 owi
 ```
