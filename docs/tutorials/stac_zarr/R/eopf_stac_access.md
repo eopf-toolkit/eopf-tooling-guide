@@ -95,15 +95,15 @@ stac_collections
     ###Collections
     - collections (11 item(s)):
       - sentinel-2-l2a
-      - sentinel-3-slstr-l1-rbt
       - sentinel-3-olci-l2-lfr
-      - sentinel-2-l1c
       - sentinel-3-slstr-l2-lst
-      - sentinel-1-l1-slc
-      - sentinel-3-olci-l1-efr
-      - sentinel-3-olci-l1-err
       - sentinel-1-l2-ocn
       - sentinel-1-l1-grd
+      - sentinel-2-l1c
+      - sentinel-1-l1-slc
+      - sentinel-3-slstr-l1-rbt
+      - sentinel-3-olci-l1-efr
+      - sentinel-3-olci-l1-err
       - sentinel-3-olci-l2-lrr
     - field(s): collections, links, numberMatched, numberReturned
 
@@ -146,19 +146,19 @@ stac_collections[["collections"]] |>
 
     [[2]]
     ###Collection
-    - id: sentinel-3-slstr-l1-rbt
-    - title: Sentinel-3 SLSTR Level-1 RBT
+    - id: sentinel-3-olci-l2-lfr
+    - title: Sentinel-3 OLCI Level-2 LFR
     - description: 
-    The Sentinel-3 SLSTR Level-1B RBT product provides radiances and brightness temperatures for each pixel in a regular image grid for each view and SLSTR channel. In addition, it also contains annotations data associated with each image pixels.
+    The Sentinel-3 OLCI L2 LFR product provides land and atmospheric geophysical parameters computed for full resolution.
     - field(s): 
     id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
 
     [[3]]
     ###Collection
-    - id: sentinel-3-olci-l2-lfr
-    - title: Sentinel-3 OLCI Level-2 LFR
+    - id: sentinel-3-slstr-l2-lst
+    - title: Sentinel-3 SLSTR Level-2 LST
     - description: 
-    The Sentinel-3 OLCI L2 LFR product provides land and atmospheric geophysical parameters computed for full resolution.
+    The Sentinel-3 SLSTR Level-2 LST product provides land surface temperature.
     - field(s): 
     id, type, links, title, assets, extent, license, keywords, providers, summaries, description, item_assets, stac_version, stac_extensions
 
@@ -262,18 +262,18 @@ sentinel_2_l2a_collection_items
 
     ###Items
     - features (10 item(s)):
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T35WLV_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WEE_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WED_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WEC_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WDD_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WDC_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WDB_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T33WYV_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T33WXV_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T33WXU_20250618T125715
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32WNS_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32WMS_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VNR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VNQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMN_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLP_20251121T120801
     - assets: 
-    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m, zipped_product
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
@@ -289,19 +289,19 @@ stac_source |>
 
     ###Items
     - features (20 item(s)):
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T35WLV_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WEE_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WED_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WEC_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WDD_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WDC_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WDB_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T33WYV_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T33WXV_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T33WXU_20250618T125715
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32WNS_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32WMS_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VNR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VNQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMN_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLP_20251121T120801
       - ... with 10 more feature(s).
     - assets: 
-    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m, zipped_product
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
@@ -317,23 +317,23 @@ sentinel_2_l2a_collection_items[["features"]] |>
 
     [[1]]
     ###Item
-    - id: S2A_MSIL2A_20250618T105651_N0511_R094_T35WLV_20250618T125715
+    - id: S2B_MSIL2A_20251121T111259_N0511_R137_T32WNS_20251121T120801
     - collection: sentinel-2-l2a
-    - bbox: xmin: 21.18917, ymin: 71.03338, xmax: 24.41268, ymax: 72.08193
-    - datetime: 2025-06-18T10:56:51.024000Z
+    - bbox: xmin: 8.99958, ymin: 63.92871, xmax: 10.53724, ymax: 64.47195
+    - datetime: 2025-11-21T11:12:59.024000Z
     - assets: 
-    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
+    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, zipped_product, product_metadata
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
     [[2]]
     ###Item
-    - id: S2A_MSIL2A_20250618T105651_N0511_R094_T34WEE_20250618T125715
+    - id: S2B_MSIL2A_20251121T111259_N0511_R137_T32WMS_20251121T120801
     - collection: sentinel-2-l2a
-    - bbox: xmin: 20.99942, ymin: 71.09895, xmax: 24.19686, ymax: 72.09958
-    - datetime: 2025-06-18T10:56:51.024000Z
+    - bbox: xmin: 6.89045, ymin: 63.92449, xmax: 9.20274, ymax: 64.84288
+    - datetime: 2025-11-21T11:12:59.024000Z
     - assets: 
-    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
+    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, zipped_product, product_metadata
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
@@ -346,7 +346,7 @@ sentinel_2_l2a_first_item <- sentinel_2_l2a_collection_items[["features"]][[1]]
 sentinel_2_l2a_first_item[["bbox"]]
 ```
 
-    [1] 21.18917 71.03338 24.41268 72.08193
+    [1]  8.999584 63.928706 10.537244 64.471951
 
 And many more additional properties, with their properties under
 `"properties"` in an individual item.
@@ -368,35 +368,38 @@ sentinel_2_l2a_first_item[["properties"]] |>
     [10] "proj:code"                            
     [11] "providers"                            
     [12] "published"                            
-    [13] "instruments"                          
-    [14] "end_datetime"                         
-    [15] "product:type"                         
-    [16] "constellation"                        
-    [17] "eo:snow_cover"                        
-    [18] "mgrs:utm_zone"                        
-    [19] "proj:centroid"                        
-    [20] "eo:cloud_cover"                       
-    [21] "start_datetime"                       
-    [22] "sat:orbit_state"                      
-    [23] "eopf:datatake_id"                     
-    [24] "mgrs:grid_square"                     
-    [25] "processing:level"                     
-    [26] "view:sun_azimuth"                     
-    [27] "mgrs:latitude_band"                   
-    [28] "processing:lineage"                   
-    [29] "product:timeliness"                   
-    [30] "sat:absolute_orbit"                   
-    [31] "sat:relative_orbit"                   
-    [32] "view:sun_elevation"                   
-    [33] "processing:facility"                  
-    [34] "processing:software"                  
-    [35] "eopf:instrument_mode"                 
-    [36] "product:timeliness_category"          
-    [37] "sat:platform_international_designator"
+    [13] "deprecated"                           
+    [14] "instruments"                          
+    [15] "end_datetime"                         
+    [16] "product:type"                         
+    [17] "constellation"                        
+    [18] "eo:snow_cover"                        
+    [19] "mgrs:utm_zone"                        
+    [20] "proj:centroid"                        
+    [21] "eo:cloud_cover"                       
+    [22] "start_datetime"                       
+    [23] "sat:orbit_state"                      
+    [24] "eopf:datatake_id"                     
+    [25] "mgrs:grid_square"                     
+    [26] "processing:level"                     
+    [27] "view:sun_azimuth"                     
+    [28] "eopf:datastrip_id"                    
+    [29] "mgrs:latitude_band"                   
+    [30] "processing:lineage"                   
+    [31] "processing:version"                   
+    [32] "product:timeliness"                   
+    [33] "sat:absolute_orbit"                   
+    [34] "sat:relative_orbit"                   
+    [35] "view:sun_elevation"                   
+    [36] "processing:facility"                  
+    [37] "processing:software"                  
+    [38] "eopf:instrument_mode"                 
+    [39] "product:timeliness_category"          
+    [40] "sat:platform_international_designator"
 
 The introductory tutorial [further explains the metadata
-properties](../../stac_zarr.md#eopf-and-stac-extensions)
-and their extensions.
+properties](../../stac_zarr.md#eopf-and-stac-extensions) and their
+extensions.
 
 For example, the EOPF instrument mode:
 
@@ -450,18 +453,18 @@ stac_source |>
 
     ###Items
     - features (10 item(s)):
-      - S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605
-      - S2A_MSIL2A_20250617T095051_N0511_R079_T33UWP_20250617T115605
-      - S2C_MSIL2A_20250615T095051_N0511_R079_T33UXP_20250615T122401
-      - S2C_MSIL2A_20250615T095051_N0511_R079_T33UWP_20250615T122401
-      - S2B_MSIL2A_20250613T100029_N0511_R122_T33UXP_20250613T135823
-      - S2B_MSIL2A_20250613T100029_N0511_R122_T33UWP_20250613T135823
-      - S2A_MSIL2A_20250610T100041_N0511_R122_T33UXP_20250610T122140
-      - S2A_MSIL2A_20250610T100041_N0511_R122_T33UWP_20250610T122140
-      - S2B_MSIL2A_20250610T095029_N0511_R079_T33UXP_20250610T120704
-      - S2B_MSIL2A_20250610T095029_N0511_R079_T33UWP_20250610T120704
+      - S2B_MSIL2A_20251120T100219_N0511_R122_T33UXP_20251120T121648
+      - S2B_MSIL2A_20251120T100219_N0511_R122_T33UWP_20251120T121648
+      - S2A_MSIL2A_20251117T100321_N0511_R122_T33UXP_20251117T120412
+      - S2A_MSIL2A_20251117T100321_N0511_R122_T33UXP_20251117T113612
+      - S2A_MSIL2A_20251117T100321_N0511_R122_T33UWP_20251117T120412
+      - S2A_MSIL2A_20251117T100321_N0511_R122_T33UWP_20251117T113612
+      - S2B_MSIL2A_20251117T095209_N0511_R079_T33UXP_20251117T120719
+      - S2B_MSIL2A_20251117T095209_N0511_R079_T33UWP_20251117T120719
+      - S2C_MSIL2A_20251115T100311_N0511_R122_T33UXP_20251115T132710
+      - S2C_MSIL2A_20251115T100311_N0511_R122_T33UWP_20251115T132710
     - assets: 
-    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m, zipped_product
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
@@ -515,7 +518,7 @@ matching_timeframe_items |>
   get_first_item_property("datetime")
 ```
 
-    [1] "2024-12-01T04:59:11.024000Z"
+    [1] "2025-08-12T14:10:51.025000Z"
 
 To search by an open interval, “..” is used to indicate the open end,
 e.g. `"../2024-01-01T23:00:00Z"` representing prior to that date-time,
@@ -532,18 +535,18 @@ stac_source |>
 
     ###Items
     - features (10 item(s)):
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T35WLV_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WEE_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WED_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WEC_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WDD_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WDC_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T34WDB_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T33WYV_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T33WXV_20250618T125715
-      - S2A_MSIL2A_20250618T105651_N0511_R094_T33WXU_20250618T125715
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32WNS_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32WMS_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VNR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VNQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMN_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLP_20251121T120801
     - assets: 
-    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m, zipped_product
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
@@ -659,18 +662,18 @@ sentinel_2b_platform_results
 
     ###Items
     - features (10 item(s)):
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T35WMV_20250618T130630
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T35WMU_20250618T130630
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T35WLV_20250618T130630
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T34WFE_20250618T130630
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T34WFD_20250618T130630
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T34WFC_20250618T130630
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T34WEE_20250618T130630
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T34WED_20250618T130630
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T34WEC_20250618T130630
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T34WEB_20250618T130630
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32WNS_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32WMS_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VNR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VNQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VMN_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLR_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLQ_20251121T120801
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32VLP_20251121T120801
     - assets: 
-    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m, zipped_product
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
@@ -711,9 +714,9 @@ stac_source |>
 
     ###Items
     - features (1 item(s)):
-      - S2B_MSIL2A_20250618T104619_N0511_R051_T35WMV_20250618T130630
+      - S2B_MSIL2A_20251121T111259_N0511_R137_T32WNS_20251121T120801
     - assets: 
-    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m
+    AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, product, product_metadata, SCL_20m, SR_10m, SR_20m, SR_60m, TCI_10m, WVP_10m, zipped_product
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
@@ -727,7 +730,7 @@ stac_source |>
   get_first_item_property("eo:cloud_cover")
 ```
 
-    [1] 28.0693
+    [1] 35.78822
 
 If we want to search for items where `instruments` is “msi”, we use the
 `a_contains()` function. We need to use this instead of `==` because
@@ -815,12 +818,12 @@ sentinel_2_l2a_collection_items[["features"]][[1]]
 ```
 
     ###Item
-    - id: S2A_MSIL2A_20250618T105651_N0511_R094_T35WLV_20250618T125715
+    - id: S2B_MSIL2A_20251121T111259_N0511_R137_T32WNS_20251121T120801
     - collection: sentinel-2-l2a
-    - bbox: xmin: 21.18917, ymin: 71.03338, xmax: 24.41268, ymax: 72.08193
-    - datetime: 2025-06-18T10:56:51.024000Z
+    - bbox: xmin: 8.99958, ymin: 63.92871, xmax: 10.53724, ymax: 64.47195
+    - datetime: 2025-11-21T11:12:59.024000Z
     - assets: 
-    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, product_metadata
+    SR_10m, SR_20m, SR_60m, AOT_10m, B01_20m, B02_10m, B03_10m, B04_10m, B05_20m, B06_20m, B07_20m, B08_10m, B09_60m, B11_20m, B12_20m, B8A_20m, SCL_20m, TCI_10m, WVP_10m, product, zipped_product, product_metadata
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
