@@ -667,6 +667,130 @@ plot(owi_stars, main = "Wind Direction", as_points = FALSE, axes = TRUE, breaks 
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/owi-plot-1.png)
 
+## Sentinel-2
+
+For this example, we return to the [Sentinel-2 Level-2A
+Collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a).
+The Sentinel-2 mission is based on two satellites with 13 spectral
+bands, with four bands at 10-metre resolution, six bands at 20-metres
+resolution, and three bands at 60-metre resolution. The mission supports
+applications for land services, including the monitoring of vegetation,
+soil and water cover, as well as the observation of inland waterways and
+coastal areas.
+
+For Sentinel-2, we will calculate the Normalized Difference Vegetation
+Index (NDVI).
+
+First, we access the *Red* (B04) and *Near-InfraRed* (B08A) bands, which
+are needed for calculation of the NDVI, at 20m resolution:
+
+``` r
+r20m_b04 <- r20m |>
+  filter(str_ends(array, "b04")) |>
+  pull(path) |>
+  read_zarr_array()
+
+r20m_b04[1:5, 1:5]
+```
+
+         [,1] [,2] [,3] [,4] [,5]
+    [1,] 1160 1149 1135 1131 1129
+    [2,] 1228 1184 1306 1182 1132
+    [3,] 1130 1170 1234 1163 1138
+    [4,] 1154 1134 1122 1134 1128
+    [5,] 1145 1127 1126 1139 1154
+
+``` r
+r20m_b8a <- r20m |>
+  filter(str_ends(array, "b8a")) |>
+  pull(path) |>
+  read_zarr_array()
+
+r20m_b8a[1:5, 1:5]
+```
+
+         [,1] [,2] [,3] [,4] [,5]
+    [1,] 3018 2849 2954 2821 2833
+    [2,] 3354 3105 3767 3393 2787
+    [3,] 3130 3039 3649 3219 2517
+    [4,] 2970 2865 2897 2810 2583
+    [5,] 2923 2744 2729 2731 2806
+
+``` r
+r20m_x <- r20m_x |>
+  read_zarr_array()
+
+r20m_x[1:5]
+```
+
+    [1] 600010 600030 600050 600070 600090
+
+``` r
+r20m_y <- r20m_y |>
+  read_zarr_array()
+
+r20m_y[1:5]
+```
+
+    [1] 5300030 5300010 5299990 5299970 5299950
+
+The function `st_as_stars()` is again used to get our data into a format
+allowing for data manipulation and visualisation.
+
+``` r
+ndvi_data <- st_as_stars(B04 = r20m_b04, B08A = r20m_b8a) |>
+  st_set_dimensions(1, names = "X", values = r20m_x) |>
+  st_set_dimensions(2, names = "Y", values = r20m_y)
+
+ndvi_data
+```
+
+    stars object with 2 dimensions and 2 attributes
+    attribute(s), summary of first 1e+05 cells:
+          Min. 1st Qu. Median     Mean 3rd Qu.  Max.
+    B04   1035    1309   1629 2296.687    2211 14363
+    B08A   869    3802   4551 4728.603    5516 11794
+    dimension(s):
+      from   to  offset delta point x/y
+    X    1 5490  600010    20 FALSE [x]
+    Y    1 5490 5300030   -20 FALSE [y]
+
+Now, we perform the initial steps for NDVI calculation:
+
+-   `sum_bands`: Calculates the sum of the Near-Infrared and Red bands.
+-   `diff_bands`: Calculates the difference between the Near-Infrared
+    and Red bands.
+
+``` r
+ndvi_data <- ndvi_data |>
+  mutate(
+    sum_bands = B04 + B08A,
+    diff_bands = B04 - B08A
+  )
+```
+
+Then, we calculate the NDVI, which is `diff_bands` / `sum_bands`. To
+prevent division by zero errors in areas where both red and NIR bands
+might be zero (e.g., water bodies or clouds), we also replace any `NaN`
+values resulting from division by zero with 0. This ensures a clean and
+robust NDVI product.
+
+``` r
+ndvi_data <- ndvi_data |>
+  mutate(
+    ndvi = diff_bands / sum_bands,
+    ndvi = ifelse(sum_bands == 0, 0, ndvi)
+  )
+```
+
+In a final step, we can visualise the calculated NDVI.
+
+``` r
+plot(ndvi_data, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/ndvi-vis-1.png)
+
 ## Sentinel-3
 
 Finally, we look at an example from the Sentinel-3 mission. The
