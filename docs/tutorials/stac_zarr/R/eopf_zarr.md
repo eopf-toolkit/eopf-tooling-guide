@@ -6,7 +6,6 @@
 -   [Introduction](#introduction)
 -   [Prerequisites](#prerequisites)
     -   [Dependencies](#dependencies)
-    -   [Fixes to the Rarr package](#fixes-to-the-rarr-package)
 -   [Access Zarr data from the STAC
     catalog](#access-zarr-data-from-the-stac-catalog)
 -   [Read Zarr data](#read-zarr-data)
@@ -33,7 +32,7 @@ into more detail on accessing and searching within the STAC catalog.
 # Prerequisites
 
 An R environment is required to follow this tutorial, with R version \>=
-4.4.0. We recommend using either
+4.5.0. We recommend using either
 [RStudio](https://posit.co/download/rstudio-desktop/) or
 [Positron](https://posit.co/products/ide/positron/) (or a cloud
 computing environment) and making use of [RStudio
@@ -57,8 +56,9 @@ install.packages("stars")
 install.packages("terra")
 ```
 
-We will also use the `Rarr` package to read Zarr data. It must be
-installed from Bioconductor, so first install the `BiocManager` package:
+We will also use the `Rarr` package (version \>= 1.10.1) to read Zarr
+data. It must be installed from Bioconductor, so first install the
+`BiocManager` package:
 
 ``` r
 install.packages("BiocManager")
@@ -79,50 +79,6 @@ library(Rarr)
 library(stars)
 library(terra)
 ```
-
-## Fixes to the `Rarr` package
-
-We will use functions from the `Rarr` package to read and analyse Zarr
-data. Unfortunately, there is currently a bug in this package, causing
-it to parse the EOPF Sample Service data URLs incorrectly – it has been
-fixed and will be updated in the next release of `Rarr`. In the
-meantime, we will write our own version of this URL parsing function and
-use it instead of the one in `Rarr`.
-
-``` r
-.url_parse_other <- function(url) {
-  parsed_url <- httr::parse_url(url)
-  bucket <- gsub(
-    x = parsed_url$path, pattern = "^/?([[a-z0-9\\:\\.-]*)/.*",
-    replacement = "\\1", ignore.case = TRUE
-  )
-  object <- gsub(
-    x = parsed_url$path, pattern = "^/?([a-z0-9\\:\\.-]*)/(.*)",
-    replacement = "\\2", ignore.case = TRUE
-  )
-  hostname <- paste0(parsed_url$scheme, "://", parsed_url$hostname)
-
-  if (!is.null(parsed_url$port)) {
-    hostname <- paste0(hostname, ":", parsed_url$port)
-  }
-
-  res <- list(
-    bucket = bucket,
-    object = object,
-    region = "auto",
-    hostname = hostname
-  )
-  return(res)
-}
-
-assignInNamespace(".url_parse_other", .url_parse_other, ns = "Rarr")
-```
-
-This function overwrites the existing one in `Rarr`, and allows us to
-continue with the analysis.
-
-If you try to run some of the examples below and receive a timeout
-error, please ensure that you have run the above code block.
 
 # Access Zarr data from the STAC Catalog
 
@@ -177,19 +133,19 @@ zarr_store <- s2_l2a_product_url |>
 zarr_store
 ```
 
-    # A tibble: 149 × 7
-       array                      path  nchunks data_type compressor dim   chunk_dim
-       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-     1 /conditions/geometry/angle http…       1 unicode2… blosc      <int> <int [1]>
-     2 /conditions/geometry/band  http…       1 unicode96 blosc      <int> <int [1]>
-     3 /conditions/geometry/dete… http…       1 int64     blosc      <int> <int [1]>
-     4 /conditions/geometry/mean… http…       1 float64   blosc      <int> <int [1]>
-     5 /conditions/geometry/mean… http…       1 float64   blosc      <int> <int [2]>
-     6 /conditions/geometry/sun_… http…       1 float64   blosc      <int> <int [3]>
-     7 /conditions/geometry/view… http…       4 float64   blosc      <int> <int [5]>
-     8 /conditions/geometry/x     http…       1 int64     blosc      <int> <int [1]>
-     9 /conditions/geometry/y     http…       1 int64     blosc      <int> <int [1]>
-    10 /conditions/mask/detector… http…      36 uint8     blosc      <int> <int [2]>
+    # A tibble: 149 × 8
+       array           path  data_type endianness compressor dim   chunk_dim nchunks
+       <chr>           <chr> <chr>     <chr>      <chr>      <lis> <list>    <list> 
+     1 /conditions/ge… http… unicode2… little     blosc      <int> <int [1]> <dbl>  
+     2 /conditions/ge… http… unicode96 little     blosc      <int> <int [1]> <dbl>  
+     3 /conditions/ge… http… int64     little     blosc      <int> <int [1]> <dbl>  
+     4 /conditions/ge… http… float64   little     blosc      <int> <int [1]> <dbl>  
+     5 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
+     6 /conditions/ge… http… float64   little     blosc      <int> <int [3]> <dbl>  
+     7 /conditions/ge… http… float64   little     blosc      <int> <int [5]> <dbl>  
+     8 /conditions/ge… http… int64     little     blosc      <int> <int [1]> <dbl>  
+     9 /conditions/ge… http… int64     little     blosc      <int> <int [1]> <dbl>  
+    10 /conditions/ma… http… uint8     <NA>       blosc      <int> <int [2]> <dbl>  
     # ℹ 139 more rows
 
 This shows us the path to access the Zarr array, the number of chunks it
@@ -206,21 +162,21 @@ r20m <- zarr_store |>
 r20m
 ```
 
-    # A tibble: 12 × 7
-       array                      path  nchunks data_type compressor dim   chunk_dim
-       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-     1 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     2 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     3 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     4 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     5 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     6 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     7 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     8 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-     9 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-    10 /measurements/reflectance… http…      36 uint16    blosc      <int> <int [2]>
-    11 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
-    12 /measurements/reflectance… http…       1 int64     blosc      <int> <int [1]>
+    # A tibble: 12 × 8
+       array           path  data_type endianness compressor dim   chunk_dim nchunks
+       <chr>           <chr> <chr>     <chr>      <chr>      <lis> <list>    <list> 
+     1 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+     2 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+     3 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+     4 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+     5 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+     6 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+     7 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+     8 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+     9 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+    10 /measurements/… http… uint16    little     blosc      <int> <int [2]> <dbl>  
+    11 /measurements/… http… int64     little     blosc      <int> <int [1]> <dbl>  
+    12 /measurements/… http… int64     little     blosc      <int> <int [1]> <dbl>  
 
 Then, we select the B02 array and examine its dimensions and chunking:
 
@@ -235,7 +191,9 @@ r20m |>
     [1] "https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/b02"
 
     $nchunks
-    [1] 36
+    $nchunks[[1]]
+    [1] 6 6
+
 
     $dim
     $dim[[1]]
@@ -261,7 +219,7 @@ r20m_b02 |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/b02/
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/b02
     Shape: 5490 x 5490
     Chunk Shape: 915 x 915
     No. of Chunks: 36 (6 x 6)
@@ -329,7 +287,7 @@ r20m_x |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/x/
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/x
     Shape: 5490
     Chunk Shape: 5490
     No. of Chunks: 1 (1)
@@ -347,7 +305,7 @@ r20m_y |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/y/
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/measurements/reflectance/r20m/y
     Shape: 5490
     Chunk Shape: 5490
     No. of Chunks: 1 (1)
@@ -452,17 +410,17 @@ First, select the relevant collection and item from STAC:
 ``` r
 l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-1-l2-ocn") |>
-  items(feature_id = "S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971") |>
+  items(feature_id = "S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E") |>
   get_request()
 
 l2_ocn
 ```
 
     ###Item
-    - id: S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971
+    - id: S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E
     - collection: sentinel-1-l2-ocn
-    - bbox: xmin: -25.77445, ymin: 30.25712, xmax: -22.82115, ymax: 32.16941
-    - datetime: 2025-06-04T19:39:23.099186Z
+    - bbox: xmin: -16.26193, ymin: 23.83777, xmax: -13.37396, ymax: 25.77964
+    - datetime: 2025-10-15T06:54:41.026338Z
     - assets: osw, owi, rvl, product, product_metadata
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
@@ -510,19 +468,19 @@ l2_ocn_store <- l2_ocn_url |>
 l2_ocn_store
 ```
 
-    # A tibble: 114 × 7
-       array                      path  nchunks data_type compressor dim   chunk_dim
-       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-     1 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [3]>
-     2 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     3 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     4 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     5 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     6 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [2]>
-     7 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [5]>
-     8 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [5]>
-     9 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [3]>
-    10 /osw/S01SIWOCN_20250604T1… http…       1 float32   blosc      <int> <int [3]>
+    # A tibble: 114 × 8
+       array           path  data_type endianness compressor dim   chunk_dim nchunks
+       <chr>           <chr> <chr>     <chr>      <chr>      <lis> <list>    <list> 
+     1 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [3]> <dbl>  
+     2 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [2]> <dbl>  
+     3 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [2]> <dbl>  
+     4 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [2]> <dbl>  
+     5 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [2]> <dbl>  
+     6 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [2]> <dbl>  
+     7 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [5]> <dbl>  
+     8 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [5]> <dbl>  
+     9 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [3]> <dbl>  
+    10 /osw/S01SIWOCN… http… float32   little     blosc      <int> <int [3]> <dbl>  
     # ℹ 104 more rows
 
 Next, we filter to access `owi` measurement data only:
@@ -532,33 +490,33 @@ l2_ocn_store |>
   filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
 ```
 
-    # A tibble: 4 × 7
-      array                       path  nchunks data_type compressor dim   chunk_dim
-      <chr>                       <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-    1 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
-    2 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
-    3 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
-    4 /owi/S01SIWOCN_20250604T19… http…       1 float32   blosc      <int> <int [2]>
+    # A tibble: 4 × 8
+      array            path  data_type endianness compressor dim   chunk_dim nchunks
+      <chr>            <chr> <chr>     <chr>      <chr>      <lis> <list>    <list> 
+    1 /owi/S01SIWOCN_… http… float32   little     blosc      <int> <int [2]> <dbl>  
+    2 /owi/S01SIWOCN_… http… float32   little     blosc      <int> <int [2]> <dbl>  
+    3 /owi/S01SIWOCN_… http… float32   little     blosc      <int> <int [2]> <dbl>  
+    4 /owi/S01SIWOCN_… http… float32   little     blosc      <int> <int [2]> <dbl>  
 
 Since all of these arrays start with
-`/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/`,
+`/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/`,
 we can remove that to get a clearer idea of what each array is:
 
 ``` r
 owi <- l2_ocn_store |>
   filter(str_starts(array, "/owi"), str_detect(array, "measurements")) |>
-  mutate(array = str_remove(array, "/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/"))
+  mutate(array = str_remove(array, "/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/"))
 
 owi
 ```
 
-    # A tibble: 4 × 7
-      array          path               nchunks data_type compressor dim   chunk_dim
-      <chr>          <chr>                <dbl> <chr>     <chr>      <lis> <list>   
-    1 latitude       https://objects.e…       1 float32   blosc      <int> <int [2]>
-    2 longitude      https://objects.e…       1 float32   blosc      <int> <int [2]>
-    3 wind_direction https://objects.e…       1 float32   blosc      <int> <int [2]>
-    4 wind_speed     https://objects.e…       1 float32   blosc      <int> <int [2]>
+    # A tibble: 4 × 8
+      array          path    data_type endianness compressor dim   chunk_dim nchunks
+      <chr>          <chr>   <chr>     <chr>      <chr>      <lis> <list>    <list> 
+    1 latitude       https:… float32   little     blosc      <int> <int [2]> <dbl>  
+    2 longitude      https:… float32   little     blosc      <int> <int [2]> <dbl>  
+    3 wind_direction https:… float32   little     blosc      <int> <int [2]> <dbl>  
+    4 wind_speed     https:… float32   little     blosc      <int> <int [2]> <dbl>  
 
 We are interested in `wind_direction`, as well as the coordinate arrays
 (`latitude` and `longitude`). We can get an overview of the arrays’
@@ -572,9 +530,9 @@ owi |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s01siwocn/04/products/cpm_v256/S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971.zarr/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/wind_direction/
-    Shape: 167 x 255
-    Chunk Shape: 167 x 255
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202510-s01siwocn-global/15/products/cpm_v256/S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E.zarr/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/wind_direction
+    Shape: 166 x 265
+    Chunk Shape: 166 x 265
     No. of Chunks: 1 (1 x 1)
     Data Type: float32
     Endianness: little
@@ -588,9 +546,9 @@ owi |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s01siwocn/04/products/cpm_v256/S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971.zarr/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/latitude/
-    Shape: 167 x 255
-    Chunk Shape: 167 x 255
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202510-s01siwocn-global/15/products/cpm_v256/S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E.zarr/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/latitude
+    Shape: 166 x 265
+    Chunk Shape: 166 x 265
     No. of Chunks: 1 (1 x 1)
     Data Type: float32
     Endianness: little
@@ -604,9 +562,9 @@ owi |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s01siwocn/04/products/cpm_v256/S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971.zarr/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements/longitude/
-    Shape: 167 x 255
-    Chunk Shape: 167 x 255
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202510-s01siwocn-global/15/products/cpm_v256/S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E.zarr/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/longitude
+    Shape: 166 x 265
+    Chunk Shape: 166 x 265
     No. of Chunks: 1 (1 x 1)
     Data Type: float32
     Endianness: little
@@ -625,12 +583,12 @@ owi_wind_direction <- owi |>
 owi_wind_direction[1:5, 1:5]
 ```
 
-             [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 87.10201 85.10722 80.11242 87.11762 80.12283
-    [2,] 87.10078 87.10600 88.11120 83.11641 86.12161
-    [3,] 89.09956 81.10477 82.10999 88.11519 88.12040
-    [4,] 87.09834 83.10355 84.10876 82.11398 81.11919
-    [5,] 83.09712 88.10233 83.10755 86.11276 85.11797
+         [,1] [,2] [,3] [,4] [,5]
+    [1,]  NaN  NaN  NaN  NaN  NaN
+    [2,]  NaN  NaN  NaN  NaN  NaN
+    [3,]  NaN  NaN  NaN  NaN  NaN
+    [4,]  NaN  NaN  NaN  NaN  NaN
+    [5,]  NaN  NaN  NaN  NaN  NaN
 
 ``` r
 owi_lat <- owi |>
@@ -642,11 +600,11 @@ owi_lat[1:5, 1:5]
 ```
 
              [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 30.26237 30.26406 30.26576 30.26746 30.26917
-    [2,] 30.27138 30.27308 30.27478 30.27648 30.27818
-    [3,] 30.28039 30.28209 30.28379 30.28549 30.28719
-    [4,] 30.28940 30.29110 30.29280 30.29450 30.29620
-    [5,] 30.29842 30.30012 30.30182 30.30351 30.30521
+    [1,] 25.34297 25.34469 25.34641 25.34813 25.34985
+    [2,] 25.33393 25.33565 25.33737 25.33909 25.34081
+    [3,] 25.32489 25.32661 25.32833 25.33006 25.33177
+    [4,] 25.31585 25.31758 25.31930 25.32101 25.32273
+    [5,] 25.30681 25.30853 25.31026 25.31198 25.31369
 
 ``` r
 owi_long <- owi |>
@@ -658,11 +616,11 @@ owi_lat[1:5, 1:5]
 ```
 
              [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 30.26237 30.26406 30.26576 30.26746 30.26917
-    [2,] 30.27138 30.27308 30.27478 30.27648 30.27818
-    [3,] 30.28039 30.28209 30.28379 30.28549 30.28719
-    [4,] 30.28940 30.29110 30.29280 30.29450 30.29620
-    [5,] 30.29842 30.30012 30.30182 30.30351 30.30521
+    [1,] 25.34297 25.34469 25.34641 25.34813 25.34985
+    [2,] 25.33393 25.33565 25.33737 25.33909 25.34081
+    [3,] 25.32489 25.32661 25.32833 25.33006 25.33177
+    [4,] 25.31585 25.31758 25.31930 25.32101 25.32273
+    [5,] 25.30681 25.30853 25.31026 25.31198 25.31369
 
 Note that both `longitude` and `latitude` are 2-dimensional arrays, and
 they are not evenly spaced. Rather, the data grid is **curvilinear** —
@@ -693,12 +651,12 @@ owi_stars
 
     stars object with 2 dimensions and 1 attribute
     attribute(s):
-                        Min. 1st Qu.   Median     Mean  3rd Qu.     Max. NA's
-    wind_direction  33.29902 57.9872 66.76632 65.45217 73.04303 91.13456  430
+                          Min.  1st Qu.   Median     Mean  3rd Qu.     Max.  NA's
+    wind_direction  0.08305743 5.195442 14.39284 126.2376 345.2434 359.5977 26913
     dimension(s):
        from  to         refsys point                      values x/y
-    X1    1 167 WGS 84 (CRS84) FALSE [167x255] -25.77,...,-22.83 [x]
-    X2    1 255 WGS 84 (CRS84) FALSE   [167x255] 30.26,...,32.16 [y]
+    X1    1 166 WGS 84 (CRS84) FALSE [166x265] -16.25,...,-13.38 [x]
+    X2    1 265 WGS 84 (CRS84) FALSE   [166x265] 23.85,...,25.77 [y]
     curvilinear grid
 
 Finally, we can plot this object:
@@ -720,164 +678,118 @@ applications for land services, including the monitoring of vegetation,
 soil and water cover, as well as the observation of inland waterways and
 coastal areas.
 
-EOPF Zarr assets include quicklook RGB composites, which are readily
-viewable representations of the satellite image. We will open the
-10-metre resolution quicklook and visualise it. This is available as an
-asset, so we can access it directly from the STAC item.
+For Sentinel-2, we will calculate the Normalized Difference Vegetation
+Index (NDVI).
+
+First, we access the *Red* (B04) and *Near-InfraRed* (B08A) bands, which
+are needed for calculation of the NDVI, at 20m resolution:
 
 ``` r
-tci_10m_asset <- s2_l2a_item |>
-  assets_select(asset_names = "TCI_10m")
-
-tci_10m_url <- tci_10m_asset |>
-  assets_url()
-
-tci_10m_url |>
-  zarr_overview()
-```
-
-    Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/quality/l2a_quicklook/r10m/tci/
-    Shape: 3 x 10980 x 10980
-    Chunk Shape: 1 x 1830 x 1830
-    No. of Chunks: 108 (3 x 6 x 6)
-    Data Type: uint8
-    Endianness: NA
-    Compressor: blosc
-
-From the overview, we can see that the quicklook array has three
-dimensions to it, each of size 10980 x 10980. The three dimensions
-correspond to red, green, and blue spectral bands (B04, B03, and B02,
-respectively), since this is an RGB composite. This information is also
-available by looking at the assets’ bands:
-
-``` r
-s2_l2a_item[["assets"]][["TCI_10m"]][["bands"]] |>
-  map_dfr(as_tibble)
-```
-
-    # A tibble: 3 × 5
-      name  common_name description    center_wavelength full_width_half_max
-      <chr> <chr>       <chr>                      <dbl>               <dbl>
-    1 B04   red         Red (band 4)               0.665               0.038
-    2 B03   green       Green (band 3)             0.56                0.045
-    3 B02   blue        Blue (band 2)              0.49                0.098
-
-We can read in a small chunk of the array to get an idea of its shape,
-using the same indexing process we’ve used before. Note that we want to
-select *all* of the bands (the first dimension listed). Rather than
-writing `1:3`, we can simply use `NULL` as the first dimension,
-indicating to get all data at this dimension. To preview the data, we
-will just get the first 2 entries (in each dimension) along the three
-bands.
-
-``` r
-tci_10m_preview <- tci_10m_url |>
-  read_zarr_array(list(NULL, 1:2, 1:2))
-
-tci_10m_preview
-```
-
-    , , 1
-
-         [,1] [,2]
-    [1,]   16   20
-    [2,]   31   34
-    [3,]   15   19
-
-    , , 2
-
-         [,1] [,2]
-    [1,]   16   18
-    [2,]   30   34
-    [3,]   13   20
-
-For visualisation purposes, we need the data in a different
-configuration — note the dimensions of the data:
-
-``` r
-dim(tci_10m_preview)
-```
-
-    [1] 3 2 2
-
-Instead, we need to get it into e.g. 2 x 2 x 3, with the *third*
-dimension reflecting the number of bands (or layers) To do this, we use
-the `aperm()` function to transpose an array, with argument `c(2, 3, 1)`
-– moving the second dimension to the first, the third to the second, and
-the first to the third. Then, we can see that the dimensions of the
-array are correct:
-
-``` r
-tci_10m_preview_perm <- tci_10m_preview |>
-  aperm(c(2, 3, 1))
-
-tci_10m_preview_perm
-```
-
-    , , 1
-
-         [,1] [,2]
-    [1,]   16   16
-    [2,]   20   18
-
-    , , 2
-
-         [,1] [,2]
-    [1,]   31   30
-    [2,]   34   34
-
-    , , 3
-
-         [,1] [,2]
-    [1,]   15   13
-    [2,]   19   20
-
-``` r
-dim(tci_10m_preview_perm)
-```
-
-    [1] 2 2 3
-
-Let’s read in the full TCI array to visualise it.
-
-``` r
-tci_10m <- tci_10m_url |>
+r20m_b04 <- r20m |>
+  filter(str_ends(array, "b04")) |>
+  pull(path) |>
   read_zarr_array()
 
-tci_10m_perm <- tci_10m |>
-  aperm(c(2, 3, 1))
-
-dim(tci_10m)
+r20m_b04[1:5, 1:5]
 ```
 
-    [1]     3 10980 10980
-
-For visualisation, we use `terra`’s `plotRGB()` function, first
-converting the array into a raster object with `rast()`:
-
-``` r
-tci_10m_perm |>
-  rast() |>
-  plotRGB()
-```
-
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/tci-10m-vis-1.png)
-
-We can do the same with the quicklook at the 60-metre resolution,
-showing the full visualisation process in a single step:
+         [,1] [,2] [,3] [,4] [,5]
+    [1,] 1160 1149 1135 1131 1129
+    [2,] 1228 1184 1306 1182 1132
+    [3,] 1130 1170 1234 1163 1138
+    [4,] 1154 1134 1122 1134 1128
+    [5,] 1145 1127 1126 1139 1154
 
 ``` r
-zarr_store |>
-  filter(array == "/quality/l2a_quicklook/r60m/tci") |>
+r20m_b8a <- r20m |>
+  filter(str_ends(array, "b8a")) |>
   pull(path) |>
-  read_zarr_array() |>
-  aperm(c(2, 3, 1)) |>
-  rast() |>
-  plotRGB()
+  read_zarr_array()
+
+r20m_b8a[1:5, 1:5]
 ```
 
-![](eopf_zarr.markdown_strict_files/figure-markdown_strict/tci-60m-vis-1.png)
+         [,1] [,2] [,3] [,4] [,5]
+    [1,] 3018 2849 2954 2821 2833
+    [2,] 3354 3105 3767 3393 2787
+    [3,] 3130 3039 3649 3219 2517
+    [4,] 2970 2865 2897 2810 2583
+    [5,] 2923 2744 2729 2731 2806
+
+``` r
+r20m_x <- r20m_x |>
+  read_zarr_array()
+
+r20m_x[1:5]
+```
+
+    [1] 600010 600030 600050 600070 600090
+
+``` r
+r20m_y <- r20m_y |>
+  read_zarr_array()
+
+r20m_y[1:5]
+```
+
+    [1] 5300030 5300010 5299990 5299970 5299950
+
+The function `st_as_stars()` is again used to get our data into a format
+allowing for data manipulation and visualisation.
+
+``` r
+ndvi_data <- st_as_stars(B04 = r20m_b04, B08A = r20m_b8a) |>
+  st_set_dimensions(1, names = "X", values = r20m_x) |>
+  st_set_dimensions(2, names = "Y", values = r20m_y)
+
+ndvi_data
+```
+
+    stars object with 2 dimensions and 2 attributes
+    attribute(s), summary of first 1e+05 cells:
+          Min. 1st Qu. Median     Mean 3rd Qu.  Max.
+    B04   1035    1309   1629 2296.687    2211 14363
+    B08A   869    3802   4551 4728.603    5516 11794
+    dimension(s):
+      from   to  offset delta point x/y
+    X    1 5490  600010    20 FALSE [x]
+    Y    1 5490 5300030   -20 FALSE [y]
+
+Now, we perform the initial steps for NDVI calculation:
+
+-   `sum_bands`: Calculates the sum of the Near-Infrared and Red bands.
+-   `diff_bands`: Calculates the difference between the Near-Infrared
+    and Red bands.
+
+``` r
+ndvi_data <- ndvi_data |>
+  mutate(
+    sum_bands = B04 + B08A,
+    diff_bands = B04 - B08A
+  )
+```
+
+Then, we calculate the NDVI, which is `diff_bands` / `sum_bands`. To
+prevent division by zero errors in areas where both red and NIR bands
+might be zero (e.g., water bodies or clouds), we also replace any `NaN`
+values resulting from division by zero with 0. This ensures a clean and
+robust NDVI product.
+
+``` r
+ndvi_data <- ndvi_data |>
+  mutate(
+    ndvi = diff_bands / sum_bands,
+    ndvi = ifelse(sum_bands == 0, 0, ndvi)
+  )
+```
+
+In a final step, we can visualise the calculated NDVI.
+
+``` r
+plot(ndvi_data, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/ndvi-vis-1.png)
 
 ## Sentinel-3
 
@@ -926,19 +838,19 @@ l2_lfr_store <- l2_lfr_url |>
 l2_lfr_store
 ```
 
-    # A tibble: 38 × 7
-       array                      path  nchunks data_type compressor dim   chunk_dim
-       <chr>                      <chr>   <dbl> <chr>     <chr>      <lis> <list>   
-     1 /conditions/geometry/lati… http…       1 float64   blosc      <int> <int [2]>
-     2 /conditions/geometry/long… http…       1 float64   blosc      <int> <int [2]>
-     3 /conditions/geometry/oaa   http…       1 float64   blosc      <int> <int [2]>
-     4 /conditions/geometry/oza   http…       1 float64   blosc      <int> <int [2]>
-     5 /conditions/geometry/saa   http…       1 float64   blosc      <int> <int [2]>
-     6 /conditions/geometry/sza   http…       1 float64   blosc      <int> <int [2]>
-     7 /conditions/image/altitude http…      20 float32   blosc      <int> <int [2]>
-     8 /conditions/image/detecto… http…      20 float32   blosc      <int> <int [2]>
-     9 /conditions/image/frame_o… http…      20 float32   blosc      <int> <int [2]>
-    10 /conditions/image/latitude http…      20 float64   blosc      <int> <int [2]>
+    # A tibble: 38 × 8
+       array           path  data_type endianness compressor dim   chunk_dim nchunks
+       <chr>           <chr> <chr>     <chr>      <chr>      <lis> <list>    <list> 
+     1 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
+     2 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
+     3 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
+     4 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
+     5 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
+     6 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
+     7 /conditions/im… http… float32   little     blosc      <int> <int [2]> <dbl>  
+     8 /conditions/im… http… float32   little     blosc      <int> <int [2]> <dbl>  
+     9 /conditions/im… http… float32   little     blosc      <int> <int [2]> <dbl>  
+    10 /conditions/im… http… float64   little     blosc      <int> <int [2]> <dbl>  
     # ℹ 28 more rows
 
 Next, we filter to access measurement data only:
@@ -951,16 +863,16 @@ l2_lfr_measurements <- l2_lfr_store |>
 l2_lfr_measurements
 ```
 
-    # A tibble: 7 × 7
-      array     path                    nchunks data_type compressor dim   chunk_dim
-      <chr>     <chr>                     <dbl> <chr>     <chr>      <lis> <list>   
-    1 gifapar   https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
-    2 iwv       https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
-    3 latitude  https://objects.eodc.e…      20 float64   blosc      <int> <int [2]>
-    4 longitude https://objects.eodc.e…      20 float64   blosc      <int> <int [2]>
-    5 otci      https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
-    6 rc681     https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
-    7 rc865     https://objects.eodc.e…      20 float32   blosc      <int> <int [2]>
+    # A tibble: 7 × 8
+      array     path         data_type endianness compressor dim   chunk_dim nchunks
+      <chr>     <chr>        <chr>     <chr>      <chr>      <lis> <list>    <list> 
+    1 gifapar   https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
+    2 iwv       https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
+    3 latitude  https://obj… float64   little     blosc      <int> <int [2]> <dbl>  
+    4 longitude https://obj… float64   little     blosc      <int> <int [2]> <dbl>  
+    5 otci      https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
+    6 rc681     https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
+    7 rc865     https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
 
 Of these, we are interested in `gifapar` as well as `longitude` and
 `latitude`. We can get an overview of the arrays’ dimensions and
@@ -974,7 +886,7 @@ l2_lfr_measurements |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/gifapar/
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/gifapar
     Shape: 4091 x 4865
     Chunk Shape: 1024 x 1024
     No. of Chunks: 20 (4 x 5)
@@ -990,7 +902,7 @@ l2_lfr_measurements |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/longitude/
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/longitude
     Shape: 4091 x 4865
     Chunk Shape: 1024 x 1024
     No. of Chunks: 20 (4 x 5)
@@ -1006,7 +918,7 @@ l2_lfr_measurements |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/latitude/
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/latitude
     Shape: 4091 x 4865
     Chunk Shape: 1024 x 1024
     No. of Chunks: 20 (4 x 5)
@@ -1117,9 +1029,11 @@ visualisation process, for comparison to the SAFE process later on.
 ``` r
 zarr_start <- Sys.time()
 
+item_id <- "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924"
+
 s2_l2a_item <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-2-l2a") |>
-  items(feature_id = "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924") |>
+  items(feature_id = item_id) |>
   get_request()
 
 s2_l2a_product <- s2_l2a_item |>
@@ -1200,18 +1114,12 @@ token
 ```
 
     <httr2_token>
-
-    • token_type        : "Bearer"
-
-    • access_token      : <REDACTED>
-
-    • expires_at        : "2025-07-10 13:05:58"
-
-    • refresh_expires_in: 0
-
-    • not-before-policy : 0
-
-    • scope             : "email profile user-context"
+    * token_type        : "Bearer"
+    * access_token      : <REDACTED>
+    * expires_at        : "2025-12-15 11:45:41"
+    * refresh_expires_in: 0
+    * not-before-policy : 0
+    * scope             : "email profile user-context"
 
 which will be used for accessing SAFE data. The `token` object contains
 the token itself and, as you can see, when it expires (10 minutes after
@@ -1225,87 +1133,87 @@ long this process takes, in `safe_start`.
 ``` r
 safe_start <- Sys.time()
 
-safe_id <- "S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE"
-
-safe_item <- stac("https://catalogue.dataspace.copernicus.eu/stac/") |>
-  collections(collection_id = "SENTINEL-2") |>
-  items(feature_id = safe_id) |>
+safe_item <- stac("https://stac.dataspace.copernicus.eu/v1") |>
+  collections(collection_id = "sentinel-2-l2a") |>
+  items(feature_id = item_id) |>
   get_request()
 
 safe_item
 ```
 
     ###Item
-    - id: S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.SAFE
-    - collection: SENTINEL-2
+    - id: S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924
+    - collection: sentinel-2-l2a
     - bbox: xmin: 10.31189, ymin: 46.83277, xmax: 11.80285, ymax: 47.84592
-    - datetime: 2025-05-30T10:15:59.024000Z
-    - assets: QUICKLOOK, PRODUCT
+    - datetime: 2025-05-30T10:15:59.024Z
+    - assets: 
+    AOT_10m, AOT_20m, AOT_60m, B01_20m, B01_60m, B02_10m, B02_20m, B02_60m, B03_10m, B03_20m, B03_60m, B04_10m, B04_20m, B04_60m, B05_20m, B05_60m, B06_20m, B06_60m, B07_20m, B07_60m, B08_10m, B09_60m, B11_20m, B11_60m, B12_20m, B12_60m, B8A_20m, B8A_60m, Product, SCL_20m, SCL_60m, TCI_10m, TCI_20m, TCI_60m, WVP_10m, WVP_20m, WVP_60m, thumbnail, safe_manifest, granule_metadata, inspire_metadata, product_metadata, datastrip_metadata
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
-The relevant asset is “PRODUCT”:
+The relevant asset is “Product”:
 
 ``` r
 safe_item |>
   items_assets()
 ```
 
-    [1] "QUICKLOOK" "PRODUCT"  
+     [1] "AOT_10m"            "AOT_20m"            "AOT_60m"           
+     [4] "B01_20m"            "B01_60m"            "B02_10m"           
+     [7] "B02_20m"            "B02_60m"            "B03_10m"           
+    [10] "B03_20m"            "B03_60m"            "B04_10m"           
+    [13] "B04_20m"            "B04_60m"            "B05_20m"           
+    [16] "B05_60m"            "B06_20m"            "B06_60m"           
+    [19] "B07_20m"            "B07_60m"            "B08_10m"           
+    [22] "B09_60m"            "B11_20m"            "B11_60m"           
+    [25] "B12_20m"            "B12_60m"            "B8A_20m"           
+    [28] "B8A_60m"            "Product"            "SCL_20m"           
+    [31] "SCL_60m"            "TCI_10m"            "TCI_20m"           
+    [34] "TCI_60m"            "WVP_10m"            "WVP_20m"           
+    [37] "WVP_60m"            "thumbnail"          "safe_manifest"     
+    [40] "granule_metadata"   "inspire_metadata"   "product_metadata"  
+    [43] "datastrip_metadata"
 
 We can select its URL for accessing the data:
 
 ``` r
 safe_url <- safe_item |>
-  assets_select(asset_names = "PRODUCT") |>
+  assets_select(asset_names = "Product") |>
   assets_url()
 
 safe_url
 ```
 
-    [1] "https://catalogue.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value"
-
-However, this URL actually *redirects* if we try to download the data,
-and the token is not properly passed. We must then first access the
-redirected URL. The following code sets up the API request via `httr2`’s
-`request()`, sets an option not to follow the redirect (so we can access
-the redirect URL manually), performs the request (via `req_perform()`),
-then accesses the new location from the header:
-
-``` r
-safe_redirect_url <- request(safe_url) |>
-  req_options(followlocation = FALSE) |>
-  req_perform() |>
-  resp_header("location")
-
-safe_redirect_url
-```
-
     [1] "https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value"
 
-The difference in the URL is that it is prefixed with `download` instead
-of `catalogue`. Now, we can use this new URL to actually get the data.
-Again, we set up the request, this time adding in the token as a Bearer
-token so that we are authenticated and have permission to access the
-data. There is also error handling, which is informative in case the
-token has expired; in which case, the above OAuth token generation code
-should be rerun. Finally, we perform the request and safe it to a ZIP
-file, stored in `safe_zip`.
+The following code sets up the API request via `httr2`’s `request()`,
+adding in the token as a Bearer token so that we are authenticated and
+have permission to access the data. Then, we add error handling, which
+is informative in case the token has expired; in which case, the above
+OAuth token generation code should be rerun. Then, we perform the
+request (via `req_perform()`) and save it to a ZIP file, stored in
+`safe_zip`.
 
 ``` r
 safe_dir <- tempdir()
-safe_zip <- paste0(safe_dir, "/", safe_id, ".zip")
+safe_zip <- paste0(safe_dir, "/", item_id, ".zip")
 
-request(safe_redirect_url) |>
+request(safe_url) |>
   req_auth_bearer_token(token$access_token) |>
   req_error(body = \(x) resp_body_json(x)[["message"]]) |>
   req_perform(path = safe_zip)
 ```
 
     <httr2_response>
+    GET https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value
+    Status: 200 OK
+    Content-Type: application/zip
+    Body: On disk 
+    
+    <httr2_response>
 
     GET
-    https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value
+    https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value 
 
     Status: 200 OK
 
@@ -1320,7 +1228,7 @@ information on where different data sets are.
 ``` r
 unzip(safe_zip, exdir = safe_dir)
 
-safe_unzip_dir <- paste0(safe_dir, "/", safe_id)
+safe_unzip_dir <- paste0(safe_dir, "/", item_id, ".SAFE")
 
 safe_files <- tibble(path = dir_ls(safe_unzip_dir)) |>
   mutate(file = basename(path)) |>
@@ -1391,21 +1299,21 @@ First, to compare the time:
 zarr_end - zarr_start
 ```
 
-    Time difference of 45.53 secs
+    Time difference of 33.8 secs
 
 ``` r
 safe_end - safe_start
 ```
 
-    Time difference of 5.79 mins
+    Time difference of 5.26 mins
 
 ``` r
 time_diff <- (safe_time_numeric * 60) - zarr_time_numeric
 time_diff_min <- round(time_diff / 60, 2)
 ```
 
-The EOPF Zarr example took 45.53 seconds, while the SAFE example took
-5.79 minutes—a difference of 301.87 seconds, or 5.03 minutes.
+“The EOPF Zarr example took 35.24 seconds, while the SAFE example took
+5.5 minutes—a difference of over 5 minutes.
 
 We can also compare the size of the objects in R:
 
@@ -1453,14 +1361,7 @@ So, of the 1.17 GB saved to disk, only 0.3% was actually used.
 
 To summarise:
 
-<table style="width:100%;">
-<colgroup>
-<col style="width: 14%" />
-<col style="width: 17%" />
-<col style="width: 28%" />
-<col style="width: 20%" />
-<col style="width: 17%" />
-</colgroup>
+<table>
 <thead>
 <tr>
 <th style="text-align: left;">Format</th>
@@ -1473,14 +1374,14 @@ To summarise:
 <tbody>
 <tr>
 <td style="text-align: left;">EOPF Zarr</td>
-<td style="text-align: left;">45.53 secs</td>
+<td style="text-align: left;">33.8 secs</td>
 <td style="text-align: left;">—</td>
 <td style="text-align: left;">—</td>
 <td style="text-align: right;">9.77 MB</td>
 </tr>
 <tr>
 <td style="text-align: left;">SAFE</td>
-<td style="text-align: left;">347.40 secs</td>
+<td style="text-align: left;">315.6 secs</td>
 <td style="text-align: left;">1.17G</td>
 <td style="text-align: left;">0.3%</td>
 <td style="text-align: right;">45.99 MB</td>
