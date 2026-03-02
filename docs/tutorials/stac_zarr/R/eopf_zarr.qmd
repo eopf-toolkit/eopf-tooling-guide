@@ -16,6 +16,7 @@ execute:
 - [Read Zarr data](#read-zarr-data)
   - [Coordinates](#coordinates)
   - [Different resolutions](#different-resolutions)
+  - [Scaling data](#scaling-data)
 - [Examples](#examples)
   - [Sentinel-1](#sentinel-1)
   - [Sentinel-2](#sentinel-2)
@@ -222,20 +223,73 @@ b02 |>
   pull(dim)
 ```
 
+## Scaling data
+
+Zarr data arrays are often packed or compressed in order to limit space. Because of this, when we read in the data, we also need to check whether the values need to be scaled or offset to their actual physical units or meaningful values. This information is contained in the metadata associated with the Zarr store. We create a helper function to obtain these values, setting the `offset` to 0 and `scale` to 1 if they do not need to be offset or scaled.
+
+```{r scale-factor-offset}
+get_scale_and_offset <- function(zarr_url, array) {
+  metadata <- Rarr:::.read_zmetadata(
+    zarr_url,
+    s3_client = Rarr:::.create_s3_client(zarr_url)
+  )
+
+  metadata <- metadata[["metadata"]]
+
+  array_metadata <- metadata[[paste0(array, "/.zattrs")]]
+
+  scale <- array_metadata[["scale_factor"]]
+  scale <- ifelse(is.null(scale), 1, scale)
+
+  offset <- array_metadata[["add_offset"]]
+  offset <- ifelse(is.null(offset), 0, offset)
+
+
+  list(
+    scale = scale,
+    offset = offset
+  )
+}
+```
+
+Then, we can check the scale and offset of the B02 spectral band, which tells us that we need to multiply the values by 0.0001 and offset them by -0.1.
+
+```{r scale-offset-b02}
+get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/b02"
+)
+```
+
+We can also check for the `x` dimensions. This tells us that no scaling or offsetting needs to be done.
+
+```{r scale-offset-x}
+get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/x"
+)
+```
+
 # Examples
 
 The following sections show examples from each of the Sentinel missions.
 
 ## Sentinel-1
-
 The first example looks at [Sentinel-1 Level 2 Ocean (OCN) data](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-1-l2-ocn), which consists of data for oceanographic study, such as monitoring sea surface conditions, detecting oil spills, and studying ocean currents. This example will show how to access and plot Wind Direction data.
 
 First, select the relevant collection and item from STAC:
 
 ```{r sentinel-1-stac}
+first_item <- stac("https://stac.core.eopf.eodc.eu/") |>
+  collections(collection_id = "sentinel-1-l2-ocn") |>
+  items(limit = 1) |>
+  get_request()
+
+first_item_id <- first_item[["features"]][[1]][["id"]]
+
 l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-1-l2-ocn") |>
-  items(feature_id = "S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E") |>
+  items(feature_id = first_item_id) |>
   get_request()
 
 l2_ocn
@@ -272,12 +326,21 @@ l2_ocn_store |>
   filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
 ```
 
-Since all of these arrays start with `/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/`, we can remove that to get a clearer idea of what each array is:
+Since all of these arrays start with a long ID, we can remove that to get a clearer idea of what each array is:
 
 ```{r owi-arrays}
 owi <- l2_ocn_store |>
-  filter(str_starts(array, "/owi"), str_detect(array, "measurements")) |>
-  mutate(array = str_remove(array, "/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/"))
+  filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
+
+array_id_prefix <- str_split(owi[["array"]], "measurements", simplify = TRUE)[, 1] %>%
+  unique()
+
+array_id_prefix
+
+array_id_prefix <- paste0(array_id_prefix, "measurements/")
+
+owi <- owi |>
+  mutate(array = str_remove(array, array_id_prefix))
 
 owi
 ```
@@ -301,7 +364,7 @@ owi |>
   zarr_overview()
 ```
 
-Here, we can see that all of the arrays are of the same shape: 167 x 255, with only one chunk. Since these are small, we can read all of the data in at once.
+Here, we can see that all of the arrays are of the same shape: 166 x 264, with only one chunk. Since these are small, we can read all of the data in at once.
 
 ```{r owi-read}
 owi_wind_direction <- owi |>
@@ -325,6 +388,43 @@ owi_long <- owi |>
 
 owi_lat[1:5, 1:5]
 ```
+
+As mentioned previously, Zarr data arrays are often packed or compressed in order to limit space, and may need to be scaled or offset to their actual physical units or meaningful values. 
+
+This information is contained in the metadata associated with the Zarr store. We created a helper function to obtain these values, setting the `offset` to 0 and `scale` to 1 if they do not need to be offset or scaled.
+
+```{r scale-factor-offset}
+get_scale_and_offset <- function(zarr_url, array) {
+  metadata <- Rarr:::.read_zmetadata(
+    zarr_url,
+    s3_client = Rarr:::.create_s3_client(zarr_url)
+  )
+
+  metadata <- metadata[["metadata"]]
+
+  array_metadata <- metadata[[paste0(array, "/.zattrs")]]
+
+  scale <- array_metadata[["scale_factor"]]
+  scale <- ifelse(is.null(scale), 1, scale)
+
+  offset <- array_metadata[["add_offset"]]
+  offset <- ifelse(is.null(offset), 0, offset)
+
+
+  list(
+    scale = scale,
+    offset = offset
+  )
+}
+
+get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "wind_direction"))
+
+get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "latitude"))
+
+get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "longitude"))
+```
+
+None of this data need to be scaled or offset.
 
 Note that both `longitude` and `latitude` are 2-dimensional arrays, and they are not evenly spaced. Rather, the data grid is **curvilinear** --- it has grid lines that are not straight, and there is a longitude and latitude for every pixel of the other layers (i.e., `wind_direction`). This format is very common in satellite data.
 
@@ -385,13 +485,50 @@ r20m_y <- r20m_y |>
 r20m_y[1:5]
 ```
 
+Then, we access the scale and offset for the bands and for the coordinates:
 
-The function `st_as_stars()` is again used to get our data into a format allowing for data manipulation and visualisation.
+```{r ndvi-scale-offset}
+r20m_b04_scale_offset <- get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/b04"
+)
+
+r20m_b04_scale_offset
+
+r20m_b8a_scale_offset <- get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/b8a"
+)
+
+r20m_b8a_scale_offset
+
+r20m_x_scale_offset <- get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/x"
+)
+
+r20m_x_scale_offset
+
+r20m_y_scale_offset <- get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/y"
+)
+
+r20m_y_scale_offset
+```
+
+The function `st_as_stars()` is used to get our data into a format that makes data manipulation and visualisation easy. In particular, it is easy to use `mutate()` to apply the necessary `scale` and `offset` factors to the data.
+
+This format is also beneficial because it allows for a quick summary of the data and its attributes, providing information such as the median and mean values of the bands and information on the grid:
 
 ```{r ndvi-stars}
 ndvi_data <- st_as_stars(B04 = r20m_b04, B08A = r20m_b8a) |>
   st_set_dimensions(1, names = "X", values = r20m_x) |>
-  st_set_dimensions(2, names = "Y", values = r20m_y)
+  st_set_dimensions(2, names = "Y", values = r20m_y) |>
+  mutate(
+    B04 = B04 * r20m_b04_scale_offset[["scale"]] + r20m_b04_scale_offset[["offset"]],
+    B08A = B08A * r20m_b8a_scale_offset[["scale"]] + r20m_b8a_scale_offset[["offset"]]
+  )
 
 ndvi_data
 ```
@@ -434,7 +571,7 @@ Again, we will access a specific item from this collection:
 ```{r gifapar-item}
 l2_lfr <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-3-olci-l2-lfr") |>
-  items(feature_id = "S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003") |>
+  items(feature_id = "S3B_OL_2_LFR____20260105T103813_20260105T104113_20260106T120044_0179_115_165_2160_ESA_O_NT_003") |>
   get_request()
 
 l2_lfr
@@ -443,6 +580,12 @@ l2_lfr
 To access all of the data, we get the "product" asset and then the full Zarr store, again using our helper function to extract array information from the full array path:
 
 ```{r gifapar-store}
+derive_store_array <- function(store, product_url) {
+  store |>
+    mutate(array = str_remove(path, product_url)) |>
+    relocate(array, .before = path)
+}
+
 l2_lfr_url <- l2_lfr |>
   assets_select(asset_names = "product") |>
   assets_url()
@@ -464,7 +607,7 @@ l2_lfr_measurements <- l2_lfr_store |>
 l2_lfr_measurements
 ```
 
-Of these, we are interested in `gifapar` as well as `longitude` and `latitude`. We can get an overview of the arrays’ dimensions and structures:
+Of these, we are interested in Green Instantaneous FAPAR (GIFAPAR). FAPAR is the fraction of absorbed photosynthetically active radiation in the plant canopy. We extract `gifapar` as well as `longitude` and `latitude`. We can get an overview of the arrays' dimensions and structures:
 
 ```{r gifapar-overview}
 l2_lfr_measurements |>
@@ -506,19 +649,35 @@ gifapar_lat <- l2_lfr_measurements |>
 gifapar_lat[1:5, 1:5]
 ```
 
-Again, both `longitude` and `latitude` are unevenly spaced 2-dimensional arrays. This tells us that the data grid is curvilinear, and we use `st_as_stars()` to get our data into the correct format for visualisation:
+We can immediately tell that the `longitude` and `latitude` will need to be scaled, since they are not typical values. We again find the scale and offset values for this data:
+
+```{r gifapar-scale-offset}
+gifapar_scale_offset <- get_scale_and_offset(l2_lfr_url, "measurements/gifapar")
+gifapar_scale_offset
+
+long_scale_offset <- get_scale_and_offset(l2_lfr_url, "measurements/longitude")
+long_scale_offset
+
+lat_scale_offset <- get_scale_and_offset(l2_lfr_url, "measurements/latitude")
+lat_scale_offset
+```
+
+Again, both `longitude` and `latitude` are unevenly spaced 2-dimensional arrays. This tells us that the data grid is curvilinear, and we use `st_as_stars()` to get our data into the correct format for visualisation, and scale it:
 
 ```{r gifapar-stars}
 gifapar_stars <- st_as_stars(gifapar = gifapar) |>
-  st_as_stars(curvilinear = list(X1 = gifapar_long, X2 = gifapar_lat))
+  st_as_stars(curvilinear = list(
+    X1 = gifapar_long * long_scale_offset[["scale"]],
+    X2 = gifapar_lat * lat_scale_offset[["scale"]]
+  )) |>
+  mutate(gifapar = gifapar * gifapar_scale_offset[["scale"]])
 
 gifapar_stars
 ``` 
 
 Finally, we plot the GIFAPAR:
 
-```{r gifapar-plot}
-#| message: false
+```{r gifapar-plot, message = FALSE, warning = FALSE}
 plot(gifapar_stars, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
 ```
 
