@@ -20,6 +20,8 @@ execute:
 - [Examples](#examples)
   - [Sentinel-1](#sentinel-1)
   - [Sentinel-2](#sentinel-2)
+    - [NDVI](#ndvi)
+    - [Quicklook composite image](#quicklook-composite-image)
   - [Sentinel-3](#sentinel-3)
 - [The benefits of EOPF Zarr over SAFE](#the-benefits-of-eopf-zarr-over-safe)
   - [Zarr example](#zarr-example)
