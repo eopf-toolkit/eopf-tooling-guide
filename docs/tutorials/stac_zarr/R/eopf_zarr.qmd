@@ -129,7 +129,6 @@ r20m |>
   as.list()
 ```
 
-
 We can also see an overview of individual arrays using `zarr_overview()`. With the default setting (where `as_data_frame` is `FALSE`), this prints information on the array directly to the console, in a more digestible way:
 
 ```{r array-overview}
@@ -154,7 +153,7 @@ r20m_b02 |>
 
 ## Coordinates
 
-Similarly, we can read in the `x` and `y` coordinates corresponding to data at 10m resolution. These `x` and `y` coordinates do not correspond to latitude and longitude---to understand the coordinate reference system used in each data set, we access the `proj:code` property of the STAC item. In this case, the coordinate reference system is [EPSG:32626](https://epsg.io/32626), which represents metres from the UTM zone's origin.
+Similarly, we can read in the `x` and `y` coordinates corresponding to data at 10m resolution. These `x` and `y` coordinates do not correspond to latitude and longitude---to understand the coordinate reference system used in each data set, we access the `proj:code` property of the STAC item. In this case, the coordinate reference system is [EPSG:32632](https://epsg.io/32632), which represents metres from the UTM zone's origin.
 
 ```{r item-proj}
 s2_l2a_item[["properties"]][["proj:code"]]
@@ -280,16 +279,9 @@ The first example looks at [Sentinel-1 Level 2 Ocean (OCN) data](https://stac.br
 First, select the relevant collection and item from STAC:
 
 ```{r sentinel-1-stac}
-first_item <- stac("https://stac.core.eopf.eodc.eu/") |>
-  collections(collection_id = "sentinel-1-l2-ocn") |>
-  items(limit = 1) |>
-  get_request()
-
-first_item_id <- first_item[["features"]][[1]][["id"]]
-
 l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-1-l2-ocn") |>
-  items(feature_id = first_item_id) |>
+  items(feature_id = "S1C_IW_OCN__2SDH_20250921T194014_20250921T194043_004227_008634_1302") |>
   get_request()
 
 l2_ocn
@@ -364,7 +356,7 @@ owi |>
   zarr_overview()
 ```
 
-Here, we can see that all of the arrays are of the same shape: 166 x 264, with only one chunk. Since these are small, we can read all of the data in at once.
+Here, we can see that all of the arrays are of the same shape: 194 x 254, with only one chunk. Since these are small, we can read all of the data in at once.
 
 ```{r owi-read}
 owi_wind_direction <- owi |>
@@ -391,32 +383,9 @@ owi_lat[1:5, 1:5]
 
 As mentioned previously, Zarr data arrays are often packed or compressed in order to limit space, and may need to be scaled or offset to their actual physical units or meaningful values. 
 
-This information is contained in the metadata associated with the Zarr store. We created a helper function to obtain these values, setting the `offset` to 0 and `scale` to 1 if they do not need to be offset or scaled.
+We use the helper function previously created to get the scale and offset for this data.
 
-```{r scale-factor-offset}
-get_scale_and_offset <- function(zarr_url, array) {
-  metadata <- Rarr:::.read_zmetadata(
-    zarr_url,
-    s3_client = Rarr:::.create_s3_client(zarr_url)
-  )
-
-  metadata <- metadata[["metadata"]]
-
-  array_metadata <- metadata[[paste0(array, "/.zattrs")]]
-
-  scale <- array_metadata[["scale_factor"]]
-  scale <- ifelse(is.null(scale), 1, scale)
-
-  offset <- array_metadata[["add_offset"]]
-  offset <- ifelse(is.null(offset), 0, offset)
-
-
-  list(
-    scale = scale,
-    offset = offset
-  )
-}
-
+```{r owi-scale-factor-offset}
 get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "wind_direction"))
 
 get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "latitude"))
@@ -424,7 +393,7 @@ get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "latitude"))
 get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "longitude"))
 ```
 
-None of this data need to be scaled or offset.
+Since the `scale` values are all 1, and the `offset` are all 0, none of this data need to be scaled or offset.
 
 Note that both `longitude` and `latitude` are 2-dimensional arrays, and they are not evenly spaced. Rather, the data grid is **curvilinear** --- it has grid lines that are not straight, and there is a longitude and latitude for every pixel of the other layers (i.e., `wind_direction`). This format is very common in satellite data.
 
@@ -452,6 +421,8 @@ plot(owi_stars, main = "Wind Direction", as_points = FALSE, axes = TRUE, breaks 
 ## Sentinel-2
 
 For this example, we return to the [Sentinel-2 Level-2A Collection](https://stac.browser.user.eopf.eodc.eu/collections/sentinel-2-l2a). The Sentinel-2 mission is based on two satellites with 13 spectral bands, with four bands at 10-metre resolution, six bands at 20-metres resolution, and three bands at 60-metre resolution. The mission supports applications for land services, including the monitoring of vegetation, soil and water cover, as well as the observation of inland waterways and coastal areas.
+
+### NDVI
 
 For Sentinel-2, we will calculate the Normalized Difference Vegetation Index (NDVI).
 
@@ -560,6 +531,99 @@ In a final step, we can visualise the calculated NDVI.
 
 ```{r ndvi-vis, message = FALSE}
 plot(ndvi_data, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colors)
+```
+
+
+### Quicklook composite image
+
+EOPF Zarr assets include quicklook RGB composites, which are readily viewable representations of the satellite image. We will open the 10-metre resolution quicklook and visualise it. This is available as an asset, so we can access it directly from the STAC item.
+
+```{r tci-10m-asset}
+tci_10m_asset <- s2_l2a_item |>
+  assets_select(asset_names = "TCI_10m")
+
+tci_10m_url <- tci_10m_asset |>
+  assets_url()
+
+tci_10m_url |>
+  zarr_overview()
+```
+
+From the overview, we can see that the quicklook array has three dimensions to it, each of size 10980 x 10980. The three dimensions correspond to red, green, and blue spectral bands (B04, B03, and B02, respectively), since this is an RGB composite. This information is also available by looking at the assets' bands:
+
+```{r tci-10m-bands}
+s2_l2a_item[["assets"]][["TCI_10m"]][["bands"]] |>
+  map_dfr(as_tibble)
+```
+
+We can read in a small chunk of the array to get an idea of its shape, using the same indexing process we've used before. Note that we want to select _all_ of the bands (the first dimension listed). Rather than writing `1:3`, we can simply use `NULL` as the first dimension, indicating to get all data at this dimension. To preview the data, we will just get the first 2 entries (in each dimension) along the three bands.
+
+```{r tci-10m-preview}
+tci_10m_preview <- tci_10m_url |>
+  read_zarr_array(list(NULL, 1:2, 1:2))
+
+tci_10m_preview
+```
+
+For visualisation purposes, we need the data in a different configuration --- note the dimensions of the data:
+
+```{r tci-10m-preview-dims}
+dim(tci_10m_preview)
+```
+
+Instead, we need to get it into e.g. 2 x 2 x 3, with the _third_ dimension reflecting the number of bands (or layers) To do this, we use the `aperm()` function to transpose an array, with argument `c(2, 3, 1)` -- moving the second dimension to the first, the third to the second, and the first to the third. Then, we can see that the dimensions of the array are correct:
+
+```{r tci-10m-preview-transf}
+tci_10m_preview_perm <- tci_10m_preview |>
+  aperm(c(2, 3, 1))
+
+tci_10m_preview_perm
+
+dim(tci_10m_preview_perm)
+```
+
+Let's read in the full TCI array to visualise it.
+
+```{r tci-10m-dims}
+tci_10m <- tci_10m_url |>
+  read_zarr_array()
+
+tci_10m_perm <- tci_10m |>
+  aperm(c(2, 3, 1))
+
+dim(tci_10m)
+```
+
+For visualisation, we use `terra`'s `plotRGB()` function, first converting the array into a raster object with `rast()`:
+
+```{r tci-10m-vis}
+tci_10m_perm |>
+  rast() |>
+  plotRGB()
+```
+
+We can do the same with the quicklook at the 60-metre resolution, first accessing the full Zarr store for the product.
+
+```{r tci-60m-store}
+s2_l2a_url <- s2_l2a_item |>
+  assets_select(asset_names = "product") |>
+  assets_url()
+
+s2_l2a_zarr_store <- s2_l2a_url |>
+  zarr_overview(as_data_frame = TRUE) |>
+  derive_store_array(s2_l2a_url)
+```
+
+Then, the full visualisation process can be done in a single step:
+
+```{r tci-60m-vis}
+s2_l2a_zarr_store |>
+  filter(array == "/quality/l2a_quicklook/r60m/tci") |>
+  pull(path) |>
+  read_zarr_array() |>
+  aperm(c(2, 3, 1)) |>
+  rast() |>
+  plotRGB()
 ```
 
 ## Sentinel-3
@@ -751,17 +815,22 @@ library(fs)
 library(lobstr)
 ```
 
-This example also requires authentication to the SAFE STAC API. You need a [Copernicus Dataspace](https://dataspace.copernicus.eu/)
-account, and to register an OAuth 2.0 client, as described in [this article](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/Authentication.html). The resulting Client Credentials should be stored in the environment variables `CDSE_ID` and `CDSE_SECRET` (using e.g. `usethis::edit_r_environ()` to set these).
+This example also requires authentication to the SAFE STAC API. You need
+a [Copernicus Dataspace](https://dataspace.copernicus.eu/) account, and
+to store your username and password in the environment variables
+`CDSE_USERNAME` and `CDSE_PASSWORD` (using e.g. `usethis::edit_r_environ()` to set these).
 
 We then use this to generate a *token*:
 
 ```{r client-token}
-token <- oauth_client("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
-  id = Sys.getenv("CDSE_ID"),
-  secret = Sys.getenv("CDSE_SECRET")
+token <- oauth_client(
+  id = "cdse-public",
+  token_url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
 ) |>
-  oauth_flow_client_credentials()
+  oauth_flow_password(
+    username = Sys.getenv("CDSE_USERNAME"),
+    password = Sys.getenv("CDSE_PASSWORD")
+  )
 
 token
 ```
@@ -921,7 +990,7 @@ time_diff <- (safe_time_numeric * 60) - zarr_time_numeric
 time_diff_min <- round(time_diff / 60, 2)
 ```
 
-"The EOPF Zarr example took 35.24 seconds, while the SAFE example took 5.5 minutes---a difference of over 5 minutes.
+The EOPF Zarr example took `r zarr_time` seconds, while the SAFE example took `r safe_time` minutes---a difference of nearly 6 minutes.
 
 We can also compare the size of the objects in R:
 
@@ -992,7 +1061,7 @@ total_used_percent <- paste0(round(as.numeric(total_used_size) / as.numeric(safe
 quicklook_size
 ```
 
-So, of the 1.17 GB saved to disk, only 0.3% was actually used.
+So, of the 1.17 GB saved to disk, only `r total_used_percent` was actually used.
 
 To summarise:
 
