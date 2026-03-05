@@ -1637,19 +1637,7 @@ request(safe_url) |>
     GET https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value
     Status: 200 OK
     Content-Type: application/zip
-    Body: On disk '/Users/sharla/Documents/Consulting/Sparkgeo/EOPF/eopf-tooling-guide/docs/tutorials/stac_zarr/R/scratch/safe/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zip' (1259528508 bytes)
-
-    <httr2_response>
-
-    GET
-    https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value 
-
-    Status: 200 OK
-
-    Content-Type: application/zip
-
-    Body: On disk
-    (1259528508 bytes)
+    Body: On disk (1259528508 bytes)
 
 We need to unzip the file and find the manifest file, which contains
 information on where different data sets are.
