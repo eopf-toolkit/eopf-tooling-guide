@@ -37,7 +37,9 @@ The following imports are required to complete all following steps. Not all impo
 ```python
 from typing import List, Optional, cast
 
+import datetime
 import requests
+
 from pystac import Collection, MediaType
 from pystac_client import Client, CollectionClient
 ```
@@ -119,7 +121,7 @@ for collection in all_collections:
 # Collection sentinel-2-l2a
 #  - Child of eopf-sample-service-stac-api
 #  - Description: The Sentinel-2 Level-2A Collection 1 product provides orthorectified Surface Reflectance (Bottom-...
-# Collection sentinel-3-slstr-l1-rbt
+# Collection sentinel-1-l1-grd
 #  - Child of eopf-sample-service-stac-api
 # ...
 ```
@@ -147,16 +149,21 @@ for item in bbox_search_results_sample.items():
             id=item.id, bbox=item.bbox
         )
     )
-# bbox search result item ID: S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605, BBOX: [[16.3343313489668, 47.73104447774509, 17.852438708473066, 48.74498411169783]]
+# bbox search result item ID: S3A_SL_2_LST____20260302T200628_20260302T200928_20260302T223836_0179_136_342_0720_PS1_O_NR_004, BBOX: [[9.38122, 41.1045, 32.653, 54.4805]]
 ```
 
 #### Temporal Extent (Time Range)
 
-Search for items whose datetime intersects a given day (UTC time).
+Search for items whose datetime intersects the last 30 days.
 
 ```python
+filter_end = datetime.datetime.now(tz=datetime.UTC)
+filter_start = filter_end - datetime.timedelta(days=30)
 time_search_results_sample = client.search(
-    datetime="2025-06-17T00:00:00Z/2025-06-17T23:59:59.999999Z", max_items=1
+    datetime="{start}/{end}".format(
+        start=filter_start.isoformat(),
+        end=filter_end.isoformat(),
+    ), max_items=1
 )
 for item in time_search_results_sample.items():
     print(
@@ -164,12 +171,12 @@ for item in time_search_results_sample.items():
             id=item.id, datetime=item.datetime
         )
     )
-# time search result item ID: S2B_MSIL1C_20250617T131029_N0511_R038_T25TFF_20250617T134831, datetime: 2025-06-17 13:10:29.024000+00:00
+# time search result item ID: S1A_EW_GRDM_1SSH_20260302T222142_20260302T222222_063454_07F8CF_828C, datetime: 2026-03-02 22:22:02.610604+00:00
 ```
 
 #### Platform
 
-Search for items whose platform is 'sentinel-2b' using [CQL2-JSON](https://docs.ogc.org/is/21-065r2/21-065r2.html).
+Search for items whose platform is 'sentinel-2a' using [CQL2-JSON](https://docs.ogc.org/is/21-065r2/21-065r2.html).
 
 ```python
 platform_search_results_sample = client.search(
@@ -183,7 +190,7 @@ for item in platform_search_results_sample.items():
             id=item.id, platform=item.properties["platform"]
         )
     )
-# platform search result item ID: S2A_MSIL2A_20250617T100551_N0511_R079_T32QPF_20250617T132932, platform: sentinel-2a
+# platform search result item ID: S2A_MSIL2A_20260226T142451_N0512_R096_T26WMC_20260226T151711, platform: sentinel-2a
 ```
 
 #### Instruments
@@ -202,17 +209,22 @@ for item in instruments_search_results_sample.items():
             id=item.id, instruments=item.properties["instruments"]
         )
     )
-# instruments search result item ID: S2B_MSIL1C_20250617T131029_N0511_R038_T25TFF_20250617T134831, instruments: ['msi']
+# instruments search result item ID: S2B_MSIL2A_20260302T140009_N0512_R010_T27WVU_20260302T190730, instruments: ['msi']
 ```
 
 #### Combined Search Criteria
 
-Search with all prior criteria combined.
+Search with all prior criteria types combined.
 
 ```python
-combined_search_results_sample = client.search(
+filter_end = datetime.datetime.now(tz=datetime.UTC)
+filter_start = filter_end - datetime.timedelta(days=90)
+combined_search_results_sample = list(client.search(
     bbox=bbox_vienna,
-    datetime="2025-06-17T00:00:00Z/2025-06-17T23:59:59.999999Z",
+    datetime="{start}/{end}".format(
+        start=filter_start.isoformat(),
+        end=filter_end.isoformat(),
+    ),
     filter={
         "op": "and",
         "args": [
@@ -221,8 +233,8 @@ combined_search_results_sample = client.search(
         ],
     },
     max_items=1,
-)
-for item in combined_search_results_sample.items():
+).items())
+for item in combined_search_results_sample:
     print(
         "combined search result item ID: {id}, BBOX: {bbox}, datetime: {datetime}, platform: {platform}, instruments: {instruments}".format(
             id=item.id,
@@ -232,7 +244,7 @@ for item in combined_search_results_sample.items():
             instruments=item.properties["instruments"],
         )
     )
-# combined search result item ID: S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605, BBOX: [16.3343313489668, 47.73104447774509, 17.852438708473066, 48.74498411169783], datetime: 2025-06-17 09:50:51.024000+00:00, platform: sentinel-2a, instruments: ['msi']
+# combined search result item ID: S2A_MSIL2A_20260106T100051_N0511_R122_T33UXP_20260106T115417, BBOX: [16.3343313489668, 47.742130410717785, 17.630562580752223, 48.74498411169783], datetime: 2026-01-06 10:00:51.024000+00:00, platform: sentinel-2a, instruments: ['msi']
 ```
 
 ### STAC Item Metadata
@@ -240,13 +252,8 @@ for item in combined_search_results_sample.items():
 Extract STAC item metadata and identify Zarr assets.
 
 ```python
-sentinel_2_l2a_collection = cast(
-    CollectionClient, client.get_collection(collection_id="sentinel-2-l2a")
-)
-sample_item = sentinel_2_l2a_collection.get_item(
-    id="S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605"
-)
-assert sample_item is not None, "Expected item does not exist"
+assert len(combined_search_results_sample) > 0, "Expected item does not exist"
+sample_item = combined_search_results_sample[0]
 print("Sample item {id}".format(id=sample_item.id))
 print(" - Datetime: {datetime}".format(datetime=sample_item.datetime))
 print(
@@ -260,10 +267,10 @@ for asset_name, asset in sample_item.get_assets(media_type=MediaType.ZARR).items
             asset_name=asset_name, asset_href=asset.href
         )
     )
-# Sample item S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605
-#  - Datetime: 2025-06-17 09:50:51.024000+00:00
+# Sample item S2A_MSIL2A_20260106T100051_N0511_R122_T33UXP_20260106T115417
+#  - Datetime: 2026-01-06 10:00:51.024000+00:00
 #  - Processing Level: L2A
-#  - Zarr asset SR_10m at https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605.zarr/measurements/reflectance/r10m
-#  - Zarr asset SR_20m at https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s02msil2a/17/products/cpm_v256/S2A_MSIL2A_20250617T095051_N0511_R079_T33UXP_20250617T115605.zarr/measurements/reflectance/r20m
+#  - Zarr asset SR_10m at https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202601-s02msil2a-eu/06/products/cpm_v262/S2A_MSIL2A_20260106T100051_N0511_R122_T33UXP_20260106T115417.zarr/measurements/reflectance/r10m
+#  - Zarr asset SR_20m at https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202601-s02msil2a-eu/06/products/cpm_v262/S2A_MSIL2A_20260106T100051_N0511_R122_T33UXP_20260106T115417.zarr/measurements/reflectance/r20m
 # ...
 ```
