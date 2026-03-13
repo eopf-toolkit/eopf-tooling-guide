@@ -11,9 +11,12 @@
 -   [Read Zarr data](#read-zarr-data)
     -   [Coordinates](#coordinates)
     -   [Different resolutions](#different-resolutions)
+    -   [Scaling data](#scaling-data)
 -   [Examples](#examples)
     -   [Sentinel-1](#sentinel-1)
     -   [Sentinel-2](#sentinel-2)
+        -   [NDVI](#ndvi)
+        -   [Quicklook composite image](#quicklook-composite-image)
     -   [Sentinel-3](#sentinel-3)
 -   [The benefits of EOPF Zarr over
     SAFE](#the-benefits-of-eopf-zarr-over-safe)
@@ -266,7 +269,7 @@ data at 10m resolution. These `x` and `y` coordinates do not correspond
 to latitude and longitude—to understand the coordinate reference system
 used in each data set, we access the `proj:code` property of the STAC
 item. In this case, the coordinate reference system is
-[EPSG:32626](https://epsg.io/32626), which represents metres from the
+[EPSG:32632](https://epsg.io/32632), which represents metres from the
 UTM zone’s origin.
 
 ``` r
@@ -393,6 +396,74 @@ b02 |>
     [[1]]
     [1] 1830 1830
 
+## Scaling data
+
+Zarr data arrays are often packed or compressed in order to limit space.
+Because of this, when we read in the data, we also need to check whether
+the values need to be scaled or offset to their actual physical units or
+meaningful values. This information is contained in the metadata
+associated with the Zarr store. We create a helper function to obtain
+these values, setting the `offset` to 0 and `scale` to 1 if they do not
+need to be offset or scaled.
+
+``` r
+get_scale_and_offset <- function(zarr_url, array) {
+  metadata <- Rarr:::.read_zmetadata(
+    zarr_url,
+    s3_client = Rarr:::.create_s3_client(zarr_url)
+  )
+
+  metadata <- metadata[["metadata"]]
+
+  array_metadata <- metadata[[paste0(array, "/.zattrs")]]
+
+  scale <- array_metadata[["scale_factor"]]
+  scale <- ifelse(is.null(scale), 1, scale)
+
+  offset <- array_metadata[["add_offset"]]
+  offset <- ifelse(is.null(offset), 0, offset)
+
+
+  list(
+    scale = scale,
+    offset = offset
+  )
+}
+```
+
+Then, we can check the scale and offset of the B02 spectral band, which
+tells us that we need to multiply the values by 0.0001 and offset them
+by -0.1.
+
+``` r
+get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/b02"
+)
+```
+
+    $scale
+    [1] 1e-04
+
+    $offset
+    [1] -0.1
+
+We can also check for the `x` dimensions. This tells us that no scaling
+or offsetting needs to be done.
+
+``` r
+get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/x"
+)
+```
+
+    $scale
+    [1] 1
+
+    $offset
+    [1] 0
+
 # Examples
 
 The following sections show examples from each of the Sentinel missions.
@@ -410,18 +481,18 @@ First, select the relevant collection and item from STAC:
 ``` r
 l2_ocn <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-1-l2-ocn") |>
-  items(feature_id = "S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E") |>
+  items(feature_id = "S1C_IW_OCN__2SDH_20250921T194014_20250921T194043_004227_008634_1302") |>
   get_request()
 
 l2_ocn
 ```
 
     ###Item
-    - id: S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E
+    - id: S1C_IW_OCN__2SDH_20250921T194014_20250921T194043_004227_008634_1302
     - collection: sentinel-1-l2-ocn
-    - bbox: xmin: -16.26193, ymin: 23.83777, xmax: -13.37396, ymax: 25.77964
-    - datetime: 2025-10-15T06:54:41.026338Z
-    - assets: osw, owi, rvl, product, product_metadata
+    - bbox: xmin: -36.82763, ymin: 66.72476, xmax: -29.99337, ymax: 68.93933
+    - datetime: 2025-09-21T19:40:29.291309Z
+    - assets: osw, owi, rvl, product, zipped_product, product_metadata
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
@@ -445,6 +516,9 @@ l2_ocn |>
 
     $product
     [1] "EOPF Product"
+
+    $zipped_product
+    [1] "Zipped EOPF Product"
 
     $product_metadata
     [1] "Consolidated Metadata"
@@ -498,14 +572,26 @@ l2_ocn_store |>
     3 /owi/S01SIWOCN_… http… float32   little     blosc      <int> <int [2]> <dbl>  
     4 /owi/S01SIWOCN_… http… float32   little     blosc      <int> <int [2]> <dbl>  
 
-Since all of these arrays start with
-`/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/`,
-we can remove that to get a clearer idea of what each array is:
+Since all of these arrays start with a long ID, we can remove that to
+get a clearer idea of what each array is:
 
 ``` r
 owi <- l2_ocn_store |>
-  filter(str_starts(array, "/owi"), str_detect(array, "measurements")) |>
-  mutate(array = str_remove(array, "/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/"))
+  filter(str_starts(array, "/owi"), str_detect(array, "measurements"))
+
+array_id_prefix <- str_split(owi[["array"]], "measurements", simplify = TRUE)[, 1] %>%
+  unique()
+
+array_id_prefix
+```
+
+    [1] "/owi/S01SIWOCN_20250921T194014_0029_C024_1302_008634_HH/"
+
+``` r
+array_id_prefix <- paste0(array_id_prefix, "measurements/")
+
+owi <- owi |>
+  mutate(array = str_remove(array, array_id_prefix))
 
 owi
 ```
@@ -530,9 +616,9 @@ owi |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202510-s01siwocn-global/15/products/cpm_v256/S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E.zarr/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/wind_direction
-    Shape: 166 x 265
-    Chunk Shape: 166 x 265
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202509-s01siwocn-eu/21/products/cpm_v256/S1C_IW_OCN__2SDH_20250921T194014_20250921T194043_004227_008634_1302.zarr/owi/S01SIWOCN_20250921T194014_0029_C024_1302_008634_HH/measurements/wind_direction
+    Shape: 194 x 254
+    Chunk Shape: 194 x 254
     No. of Chunks: 1 (1 x 1)
     Data Type: float32
     Endianness: little
@@ -546,9 +632,9 @@ owi |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202510-s01siwocn-global/15/products/cpm_v256/S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E.zarr/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/latitude
-    Shape: 166 x 265
-    Chunk Shape: 166 x 265
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202509-s01siwocn-eu/21/products/cpm_v256/S1C_IW_OCN__2SDH_20250921T194014_20250921T194043_004227_008634_1302.zarr/owi/S01SIWOCN_20250921T194014_0029_C024_1302_008634_HH/measurements/latitude
+    Shape: 194 x 254
+    Chunk Shape: 194 x 254
     No. of Chunks: 1 (1 x 1)
     Data Type: float32
     Endianness: little
@@ -562,16 +648,16 @@ owi |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202510-s01siwocn-global/15/products/cpm_v256/S1C_IW_OCN__2SDV_20251015T065428_20251015T065453_004569_009091_AB3E.zarr/owi/S01SIWOCN_20251015T065428_0025_C026_AB3E_009091_VV/measurements/longitude
-    Shape: 166 x 265
-    Chunk Shape: 166 x 265
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202509-s01siwocn-eu/21/products/cpm_v256/S1C_IW_OCN__2SDH_20250921T194014_20250921T194043_004227_008634_1302.zarr/owi/S01SIWOCN_20250921T194014_0029_C024_1302_008634_HH/measurements/longitude
+    Shape: 194 x 254
+    Chunk Shape: 194 x 254
     No. of Chunks: 1 (1 x 1)
     Data Type: float32
     Endianness: little
     Compressor: blosc
 
-Here, we can see that all of the arrays are of the same shape: 167 x
-255, with only one chunk. Since these are small, we can read all of the
+Here, we can see that all of the arrays are of the same shape: 194 x
+254, with only one chunk. Since these are small, we can read all of the
 data in at once.
 
 ``` r
@@ -600,11 +686,11 @@ owi_lat[1:5, 1:5]
 ```
 
              [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 25.34297 25.34469 25.34641 25.34813 25.34985
-    [2,] 25.33393 25.33565 25.33737 25.33909 25.34081
-    [3,] 25.32489 25.32661 25.32833 25.33006 25.33177
-    [4,] 25.31585 25.31758 25.31930 25.32101 25.32273
-    [5,] 25.30681 25.30853 25.31026 25.31198 25.31369
+    [1,] 66.73324 66.73544 66.73763 66.73981 66.74200
+    [2,] 66.74212 66.74432 66.74651 66.74870 66.75089
+    [3,] 66.75100 66.75320 66.75540 66.75759 66.75978
+    [4,] 66.75988 66.76208 66.76428 66.76648 66.76867
+    [5,] 66.76875 66.77097 66.77317 66.77537 66.77757
 
 ``` r
 owi_long <- owi |>
@@ -616,11 +702,51 @@ owi_lat[1:5, 1:5]
 ```
 
              [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 25.34297 25.34469 25.34641 25.34813 25.34985
-    [2,] 25.33393 25.33565 25.33737 25.33909 25.34081
-    [3,] 25.32489 25.32661 25.32833 25.33006 25.33177
-    [4,] 25.31585 25.31758 25.31930 25.32101 25.32273
-    [5,] 25.30681 25.30853 25.31026 25.31198 25.31369
+    [1,] 66.73324 66.73544 66.73763 66.73981 66.74200
+    [2,] 66.74212 66.74432 66.74651 66.74870 66.75089
+    [3,] 66.75100 66.75320 66.75540 66.75759 66.75978
+    [4,] 66.75988 66.76208 66.76428 66.76648 66.76867
+    [5,] 66.76875 66.77097 66.77317 66.77537 66.77757
+
+As mentioned previously, Zarr data arrays are often packed or compressed
+in order to limit space, and may need to be scaled or offset to their
+actual physical units or meaningful values.
+
+We use the helper function previously created to get the scale and
+offset for this data.
+
+``` r
+get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "wind_direction"))
+```
+
+    $scale
+    [1] 1
+
+    $offset
+    [1] 0
+
+``` r
+get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "latitude"))
+```
+
+    $scale
+    [1] 1
+
+    $offset
+    [1] 0
+
+``` r
+get_scale_and_offset(l2_ocn_url, paste0(array_id_prefix, "longitude"))
+```
+
+    $scale
+    [1] 1
+
+    $offset
+    [1] 0
+
+Since the `scale` values are all 1, and the `offset` are all 0, none of
+this data need to be scaled or offset.
 
 Note that both `longitude` and `latitude` are 2-dimensional arrays, and
 they are not evenly spaced. Rather, the data grid is **curvilinear** —
@@ -651,12 +777,12 @@ owi_stars
 
     stars object with 2 dimensions and 1 attribute
     attribute(s):
-                          Min.  1st Qu.   Median     Mean  3rd Qu.     Max.  NA's
-    wind_direction  0.08305743 5.195442 14.39284 126.2376 345.2434 359.5977 26913
+                         Min.  1st Qu.   Median     Mean  3rd Qu.     Max.  NA's
+    wind_direction  0.6547565 49.15513 59.34981 59.91768 67.66366 359.6461 37952
     dimension(s):
-       from  to         refsys point                      values x/y
-    X1    1 166 WGS 84 (CRS84) FALSE [166x265] -16.25,...,-13.38 [x]
-    X2    1 265 WGS 84 (CRS84) FALSE   [166x265] 23.85,...,25.77 [y]
+       from  to         refsys point                     values x/y
+    X1    1 194 WGS 84 (CRS84) FALSE [194x254] -36.8,...,-30.03 [x]
+    X2    1 254 WGS 84 (CRS84) FALSE  [194x254] 66.73,...,68.92 [y]
     curvilinear grid
 
 Finally, we can plot this object:
@@ -677,6 +803,8 @@ resolution, and three bands at 60-metre resolution. The mission supports
 applications for land services, including the monitoring of vegetation,
 soil and water cover, as well as the observation of inland waterways and
 coastal areas.
+
+### NDVI
 
 For Sentinel-2, we will calculate the Normalized Difference Vegetation
 Index (NDVI).
@@ -734,22 +862,95 @@ r20m_y[1:5]
 
     [1] 5300030 5300010 5299990 5299970 5299950
 
-The function `st_as_stars()` is again used to get our data into a format
-allowing for data manipulation and visualisation.
+Then, we access the scale and offset for the bands and for the
+coordinates:
+
+``` r
+r20m_b04_scale_offset <- get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/b04"
+)
+
+r20m_b04_scale_offset
+```
+
+    $scale
+    [1] 1e-04
+
+    $offset
+    [1] -0.1
+
+``` r
+r20m_b8a_scale_offset <- get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/b8a"
+)
+
+r20m_b8a_scale_offset
+```
+
+    $scale
+    [1] 1e-04
+
+    $offset
+    [1] -0.1
+
+``` r
+r20m_x_scale_offset <- get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/x"
+)
+
+r20m_x_scale_offset
+```
+
+    $scale
+    [1] 1
+
+    $offset
+    [1] 0
+
+``` r
+r20m_y_scale_offset <- get_scale_and_offset(
+  s2_l2a_product_url,
+  "measurements/reflectance/r20m/y"
+)
+
+r20m_y_scale_offset
+```
+
+    $scale
+    [1] 1
+
+    $offset
+    [1] 0
+
+The function `st_as_stars()` is used to get our data into a format that
+makes data manipulation and visualisation easy. In particular, it is
+easy to use `mutate()` to apply the necessary `scale` and `offset`
+factors to the data.
+
+This format is also beneficial because it allows for a quick summary of
+the data and its attributes, providing information such as the median
+and mean values of the bands and information on the grid:
 
 ``` r
 ndvi_data <- st_as_stars(B04 = r20m_b04, B08A = r20m_b8a) |>
   st_set_dimensions(1, names = "X", values = r20m_x) |>
-  st_set_dimensions(2, names = "Y", values = r20m_y)
+  st_set_dimensions(2, names = "Y", values = r20m_y) |>
+  mutate(
+    B04 = B04 * r20m_b04_scale_offset[["scale"]] + r20m_b04_scale_offset[["offset"]],
+    B08A = B08A * r20m_b8a_scale_offset[["scale"]] + r20m_b8a_scale_offset[["offset"]]
+  )
 
 ndvi_data
 ```
 
     stars object with 2 dimensions and 2 attributes
     attribute(s), summary of first 1e+05 cells:
-          Min. 1st Qu. Median     Mean 3rd Qu.  Max.
-    B04   1035    1309   1629 2296.687    2211 14363
-    B08A   869    3802   4551 4728.603    5516 11794
+             Min. 1st Qu. Median      Mean 3rd Qu.   Max.
+    B04    0.0035  0.0309 0.0629 0.1296687  0.1211 1.3363
+    B08A  -0.0131  0.2802 0.3551 0.3728603  0.4516 1.0794
     dimension(s):
       from   to  offset delta point x/y
     X    1 5490  600010    20 FALSE [x]
@@ -791,6 +992,180 @@ plot(ndvi_data, as_points = FALSE, axes = TRUE, breaks = "equal", col = hcl.colo
 
 ![](eopf_zarr.markdown_strict_files/figure-markdown_strict/ndvi-vis-1.png)
 
+### Quicklook composite image
+
+EOPF Zarr assets include quicklook RGB composites, which are readily
+viewable representations of the satellite image. We will open the
+10-metre resolution quicklook and visualise it. This is available as an
+asset, so we can access it directly from the STAC item.
+
+``` r
+tci_10m_asset <- s2_l2a_item |>
+  assets_select(asset_names = "TCI_10m")
+
+tci_10m_url <- tci_10m_asset |>
+  assets_url()
+
+tci_10m_url |>
+  zarr_overview()
+```
+
+    Type: Array
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202505-s02msil2a/30/products/cpm_v256/S2B_MSIL2A_20250530T101559_N0511_R065_T32TPT_20250530T130924.zarr/quality/l2a_quicklook/r10m/tci
+    Shape: 3 x 10980 x 10980
+    Chunk Shape: 1 x 1830 x 1830
+    No. of Chunks: 108 (3 x 6 x 6)
+    Data Type: uint8
+    Endianness: NA
+    Compressor: blosc
+
+From the overview, we can see that the quicklook array has three
+dimensions to it, each of size 10980 x 10980. The three dimensions
+correspond to red, green, and blue spectral bands (B04, B03, and B02,
+respectively), since this is an RGB composite. This information is also
+available by looking at the assets’ bands:
+
+``` r
+s2_l2a_item[["assets"]][["TCI_10m"]][["bands"]] |>
+  map_dfr(as_tibble)
+```
+
+    # A tibble: 3 × 5
+      name  description    `eo:common_name` `eo:center_wavelength`
+      <chr> <chr>          <chr>                             <dbl>
+    1 B04   Red (band 4)   red                               0.665
+    2 B03   Green (band 3) green                             0.56 
+    3 B02   Blue (band 2)  blue                              0.49 
+    # ℹ 1 more variable: `eo:full_width_half_max` <dbl>
+
+We can read in a small chunk of the array to get an idea of its shape,
+using the same indexing process we’ve used before. Note that we want to
+select *all* of the bands (the first dimension listed). Rather than
+writing `1:3`, we can simply use `NULL` as the first dimension,
+indicating to get all data at this dimension. To preview the data, we
+will just get the first 2 entries (in each dimension) along the three
+bands.
+
+``` r
+tci_10m_preview <- tci_10m_url |>
+  read_zarr_array(list(NULL, 1:2, 1:2))
+
+tci_10m_preview
+```
+
+    , , 1
+
+         [,1] [,2]
+    [1,]   16   20
+    [2,]   31   34
+    [3,]   15   19
+
+    , , 2
+
+         [,1] [,2]
+    [1,]   16   18
+    [2,]   30   34
+    [3,]   13   20
+
+For visualisation purposes, we need the data in a different
+configuration — note the dimensions of the data:
+
+``` r
+dim(tci_10m_preview)
+```
+
+    [1] 3 2 2
+
+Instead, we need to get it into e.g. 2 x 2 x 3, with the *third*
+dimension reflecting the number of bands (or layers) To do this, we use
+the `aperm()` function to transpose an array, with argument `c(2, 3, 1)`
+– moving the second dimension to the first, the third to the second, and
+the first to the third. Then, we can see that the dimensions of the
+array are correct:
+
+``` r
+tci_10m_preview_perm <- tci_10m_preview |>
+  aperm(c(2, 3, 1))
+
+tci_10m_preview_perm
+```
+
+    , , 1
+
+         [,1] [,2]
+    [1,]   16   16
+    [2,]   20   18
+
+    , , 2
+
+         [,1] [,2]
+    [1,]   31   30
+    [2,]   34   34
+
+    , , 3
+
+         [,1] [,2]
+    [1,]   15   13
+    [2,]   19   20
+
+``` r
+dim(tci_10m_preview_perm)
+```
+
+    [1] 2 2 3
+
+Let’s read in the full TCI array to visualise it.
+
+``` r
+tci_10m <- tci_10m_url |>
+  read_zarr_array()
+
+tci_10m_perm <- tci_10m |>
+  aperm(c(2, 3, 1))
+
+dim(tci_10m)
+```
+
+    [1]     3 10980 10980
+
+For visualisation, we use `terra`’s `plotRGB()` function, first
+converting the array into a raster object with `rast()`:
+
+``` r
+tci_10m_perm |>
+  rast() |>
+  plotRGB()
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/tci-10m-vis-1.png)
+
+We can do the same with the quicklook at the 60-metre resolution, first
+accessing the full Zarr store for the product.
+
+``` r
+s2_l2a_url <- s2_l2a_item |>
+  assets_select(asset_names = "product") |>
+  assets_url()
+
+s2_l2a_zarr_store <- s2_l2a_url |>
+  zarr_overview(as_data_frame = TRUE) |>
+  derive_store_array(s2_l2a_url)
+```
+
+Then, the full visualisation process can be done in a single step:
+
+``` r
+s2_l2a_zarr_store |>
+  filter(array == "/quality/l2a_quicklook/r60m/tci") |>
+  pull(path) |>
+  read_zarr_array() |>
+  aperm(c(2, 3, 1)) |>
+  rast() |>
+  plotRGB()
+```
+
+![](eopf_zarr.markdown_strict_files/figure-markdown_strict/tci-60m-vis-1.png)
+
 ## Sentinel-3
 
 Finally, we look at an example from the Sentinel-3 mission. The
@@ -805,7 +1180,7 @@ Again, we will access a specific item from this collection:
 ``` r
 l2_lfr <- stac("https://stac.core.eopf.eodc.eu/") |>
   collections(collection_id = "sentinel-3-olci-l2-lfr") |>
-  items(feature_id = "S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003") |>
+  items(feature_id = "S3B_OL_2_LFR____20260105T103813_20260105T104113_20260106T120044_0179_115_165_2160_ESA_O_NT_003") |>
   get_request()
 
 l2_lfr
@@ -813,12 +1188,12 @@ l2_lfr
 
     ###Item
     - id: 
-    S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003
+    S3B_OL_2_LFR____20260105T103813_20260105T104113_20260106T120044_0179_115_165_2160_ESA_O_NT_003
     - collection: sentinel-3-olci-l2-lfr
-    - bbox: xmin: -10.86330, ymin: 39.54440, xmax: 9.13909, ymax: 52.45360
-    - datetime: 2025-06-05T10:24:30.251369Z
+    - bbox: xmin: -14.13710, ymin: 39.53910, xmax: 5.86104, ymax: 52.44410
+    - datetime: 2026-01-05T10:39:42.550682Z
     - assets: 
-    iwv, lagp, lqsf, otci, rc681, rc865, gifapar, product, product_metadata
+    iwv, lagp, lqsf, otci, rc681, rc865, gifapar, product, zipped_product, product_metadata
     - item's fields: 
     assets, bbox, collection, geometry, id, links, properties, stac_extensions, stac_version, type
 
@@ -827,6 +1202,12 @@ Zarr store, again using our helper function to extract array information
 from the full array path:
 
 ``` r
+derive_store_array <- function(store, product_url) {
+  store |>
+    mutate(array = str_remove(path, product_url)) |>
+    relocate(array, .before = path)
+}
+
 l2_lfr_url <- l2_lfr |>
   assets_select(asset_names = "product") |>
   assets_url()
@@ -838,20 +1219,20 @@ l2_lfr_store <- l2_lfr_url |>
 l2_lfr_store
 ```
 
-    # A tibble: 38 × 8
+    # A tibble: 46 × 8
        array           path  data_type endianness compressor dim   chunk_dim nchunks
        <chr>           <chr> <chr>     <chr>      <chr>      <lis> <list>    <list> 
-     1 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
-     2 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
-     3 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
-     4 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
-     5 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
-     6 /conditions/ge… http… float64   little     blosc      <int> <int [2]> <dbl>  
-     7 /conditions/im… http… float32   little     blosc      <int> <int [2]> <dbl>  
-     8 /conditions/im… http… float32   little     blosc      <int> <int [2]> <dbl>  
-     9 /conditions/im… http… float32   little     blosc      <int> <int [2]> <dbl>  
-    10 /conditions/im… http… float64   little     blosc      <int> <int [2]> <dbl>  
-    # ℹ 28 more rows
+     1 /conditions/ge… http… int32     little     blosc      <int> <int [2]> <dbl>  
+     2 /conditions/ge… http… int32     little     blosc      <int> <int [2]> <dbl>  
+     3 /conditions/ge… http… int32     little     blosc      <int> <int [2]> <dbl>  
+     4 /conditions/ge… http… uint32    little     blosc      <int> <int [2]> <dbl>  
+     5 /conditions/ge… http… int32     little     blosc      <int> <int [2]> <dbl>  
+     6 /conditions/ge… http… uint32    little     blosc      <int> <int [2]> <dbl>  
+     7 /conditions/im… http… int16     little     blosc      <int> <int [2]> <dbl>  
+     8 /conditions/im… http… int16     little     blosc      <int> <int [2]> <dbl>  
+     9 /conditions/im… http… int8      <NA>       blosc      <int> <int [2]> <dbl>  
+    10 /conditions/im… http… int32     little     blosc      <int> <int [2]> <dbl>  
+    # ℹ 36 more rows
 
 Next, we filter to access measurement data only:
 
@@ -863,18 +1244,22 @@ l2_lfr_measurements <- l2_lfr_store |>
 l2_lfr_measurements
 ```
 
-    # A tibble: 7 × 8
-      array     path         data_type endianness compressor dim   chunk_dim nchunks
-      <chr>     <chr>        <chr>     <chr>      <chr>      <lis> <list>    <list> 
-    1 gifapar   https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
-    2 iwv       https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
-    3 latitude  https://obj… float64   little     blosc      <int> <int [2]> <dbl>  
-    4 longitude https://obj… float64   little     blosc      <int> <int [2]> <dbl>  
-    5 otci      https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
-    6 rc681     https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
-    7 rc865     https://obj… float32   little     blosc      <int> <int [2]> <dbl>  
+    # A tibble: 9 × 8
+      array      path        data_type endianness compressor dim   chunk_dim nchunks
+      <chr>      <chr>       <chr>     <chr>      <chr>      <lis> <list>    <list> 
+    1 altitude   https://ob… int16     little     blosc      <int> <int [2]> <dbl>  
+    2 gifapar    https://ob… uint8     <NA>       blosc      <int> <int [2]> <dbl>  
+    3 iwv        https://ob… uint8     <NA>       blosc      <int> <int [2]> <dbl>  
+    4 latitude   https://ob… int32     little     blosc      <int> <int [2]> <dbl>  
+    5 longitude  https://ob… int32     little     blosc      <int> <int [2]> <dbl>  
+    6 otci       https://ob… uint8     <NA>       blosc      <int> <int [2]> <dbl>  
+    7 rc681      https://ob… uint16    little     blosc      <int> <int [2]> <dbl>  
+    8 rc865      https://ob… uint16    little     blosc      <int> <int [2]> <dbl>  
+    9 time_stamp https://ob… int64     little     blosc      <int> <int [1]> <dbl>  
 
-Of these, we are interested in `gifapar` as well as `longitude` and
+Of these, we are interested in Green Instantaneous FAPAR (GIFAPAR).
+FAPAR is the fraction of absorbed photosynthetically active radiation in
+the plant canopy. We extract `gifapar` as well as `longitude` and
 `latitude`. We can get an overview of the arrays’ dimensions and
 structures:
 
@@ -886,12 +1271,12 @@ l2_lfr_measurements |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/gifapar
-    Shape: 4091 x 4865
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202601-s03olclfr-eu/05/products/cpm_v262/S3B_OL_2_LFR____20260105T103813_20260105T104113_20260106T120044_0179_115_165_2160_ESA_O_NT_003.zarr/measurements/gifapar
+    Shape: 4090 x 4865
     Chunk Shape: 1024 x 1024
     No. of Chunks: 20 (4 x 5)
-    Data Type: float32
-    Endianness: little
+    Data Type: uint8
+    Endianness: NA
     Compressor: blosc
 
 ``` r
@@ -902,11 +1287,11 @@ l2_lfr_measurements |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/longitude
-    Shape: 4091 x 4865
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202601-s03olclfr-eu/05/products/cpm_v262/S3B_OL_2_LFR____20260105T103813_20260105T104113_20260106T120044_0179_115_165_2160_ESA_O_NT_003.zarr/measurements/longitude
+    Shape: 4090 x 4865
     Chunk Shape: 1024 x 1024
     No. of Chunks: 20 (4 x 5)
-    Data Type: float64
+    Data Type: int32
     Endianness: little
     Compressor: blosc
 
@@ -918,11 +1303,11 @@ l2_lfr_measurements |>
 ```
 
     Type: Array
-    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202506-s03olclfr/05/products/cpm_v256/S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003.zarr/measurements/latitude
-    Shape: 4091 x 4865
+    Path: https://objects.eodc.eu:443/e05ab01a9d56408d82ac32d69a5aae2a:202601-s03olclfr-eu/05/products/cpm_v262/S3B_OL_2_LFR____20260105T103813_20260105T104113_20260106T120044_0179_115_165_2160_ESA_O_NT_003.zarr/measurements/latitude
+    Shape: 4090 x 4865
     Chunk Shape: 1024 x 1024
     No. of Chunks: 20 (4 x 5)
-    Data Type: float64
+    Data Type: int32
     Endianness: little
     Compressor: blosc
 
@@ -944,11 +1329,11 @@ gifapar_long[1:5, 1:5]
 ```
 
               [,1]      [,2]      [,3]      [,4]      [,5]
-    [1,] -9.244943 -9.240988 -9.237033 -9.233078 -9.229123
-    [2,] -9.245328 -9.241373 -9.237418 -9.233464 -9.229509
-    [3,] -9.245713 -9.241758 -9.237804 -9.233849 -9.229895
-    [4,] -9.246098 -9.242143 -9.238189 -9.234235 -9.230281
-    [5,] -9.246483 -9.242529 -9.238575 -9.234620 -9.230666
+    [1,] -12519564 -12515610 -12511656 -12507702 -12503748
+    [2,] -12519948 -12515994 -12512040 -12508087 -12504133
+    [3,] -12520333 -12516379 -12512425 -12508471 -12504518
+    [4,] -12520717 -12516763 -12512810 -12508856 -12504903
+    [5,] -12521101 -12517147 -12513194 -12509241 -12505288
 
 ``` r
 gifapar_lat <- l2_lfr_measurements |>
@@ -960,32 +1345,73 @@ gifapar_lat[1:5, 1:5]
 ```
 
              [,1]     [,2]     [,3]     [,4]     [,5]
-    [1,] 52.45365 52.45342 52.45320 52.45298 52.45276
-    [2,] 52.45109 52.45087 52.45064 52.45042 52.45020
-    [3,] 52.44853 52.44831 52.44808 52.44786 52.44764
-    [4,] 52.44597 52.44575 52.44553 52.44530 52.44508
-    [5,] 52.44341 52.44319 52.44297 52.44274 52.44252
+    [1,] 52444051 52443830 52443608 52443386 52443165
+    [2,] 52441491 52441270 52441048 52440827 52440605
+    [3,] 52438931 52438710 52438488 52438267 52438045
+    [4,] 52436371 52436150 52435928 52435707 52435485
+    [5,] 52433811 52433590 52433368 52433147 52432925
+
+We can immediately tell that the `longitude` and `latitude` will need to
+be scaled, since they are not typical values. We again find the scale
+and offset values for this data:
+
+``` r
+gifapar_scale_offset <- get_scale_and_offset(l2_lfr_url, "measurements/gifapar")
+gifapar_scale_offset
+```
+
+    $scale
+    [1] 0.003937008
+
+    $offset
+    [1] 0
+
+``` r
+long_scale_offset <- get_scale_and_offset(l2_lfr_url, "measurements/longitude")
+long_scale_offset
+```
+
+    $scale
+    [1] 1e-06
+
+    $offset
+    [1] 0
+
+``` r
+lat_scale_offset <- get_scale_and_offset(l2_lfr_url, "measurements/latitude")
+lat_scale_offset
+```
+
+    $scale
+    [1] 1e-06
+
+    $offset
+    [1] 0
 
 Again, both `longitude` and `latitude` are unevenly spaced 2-dimensional
 arrays. This tells us that the data grid is curvilinear, and we use
 `st_as_stars()` to get our data into the correct format for
-visualisation:
+visualisation, and scale it:
 
 ``` r
 gifapar_stars <- st_as_stars(gifapar = gifapar) |>
-  st_as_stars(curvilinear = list(X1 = gifapar_long, X2 = gifapar_lat))
+  st_as_stars(curvilinear = list(
+    X1 = gifapar_long * long_scale_offset[["scale"]],
+    X2 = gifapar_lat * lat_scale_offset[["scale"]]
+  )) |>
+  mutate(gifapar = gifapar * gifapar_scale_offset[["scale"]])
 
 gifapar_stars
 ```
 
     stars object with 2 dimensions and 1 attribute
     attribute(s), summary of first 1e+05 cells:
-             Min. 1st Qu. Median Mean 3rd Qu. Max.  NA's
-    gifapar    NA      NA     NA  NaN      NA   NA 1e+05
+                 Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
+    gifapar  1.003937 1.003937 1.003937 1.003937 1.003937 1.003937
     dimension(s):
        from   to         refsys point                       values x/y
-    X1    1 4091 WGS 84 (CRS84) FALSE [4091x4865] -10.86,...,9.139 [x]
-    X2    1 4865 WGS 84 (CRS84) FALSE  [4091x4865] 39.54,...,52.45 [y]
+    X1    1 4090 WGS 84 (CRS84) FALSE [4090x4865] -14.14,...,5.861 [x]
+    X2    1 4865 WGS 84 (CRS84) FALSE  [4090x4865] 39.54,...,52.44 [y]
     curvilinear grid
 
 Finally, we plot the GIFAPAR:
@@ -1006,7 +1432,7 @@ files as well as an XML manifest. In order to access any scene data, the
 entire zip archive had to be downloaded, which could be quite
 inefficient.
 
-Zarr is optimised for efficient data retrieval—arrays are segmented into
+Zarr is optimised for efficient data retrieval; arrays are segmented into
 one or more chunks, and a single Sentinel scene could potentially be
 across several chunks. A data consumer can choose to download only the
 chunks required for their use case, rather than the entire zip archive.
@@ -1021,7 +1447,7 @@ and downloads less data.
 
 ## Zarr example
 
-This example how to access the 60-metre resolution quicklook of a
+This example shows how to access the 60-metre resolution quicklook of a
 Sentinel-2 mission, explored in more detail [above](#sentinel-2). We set
 up `zarr_start` and `zarr_end` to time the data retrieval and
 visualisation process, for comparison to the SAFE process later on.
@@ -1095,20 +1521,21 @@ library(lobstr)
 
 This example also requires authentication to the SAFE STAC API. You need
 a [Copernicus Dataspace](https://dataspace.copernicus.eu/) account, and
-to register an OAuth 2.0 client, as described in [this
-article](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/Authentication.html).
-The resulting Client Credentials should be stored in the environment
-variables `CDSE_ID` and `CDSE_SECRET` (using
+to store your username and password in the environment variables
+`CDSE_USERNAME` and `CDSE_PASSWORD` (using
 e.g. `usethis::edit_r_environ()` to set these).
 
 We then use this to generate a *token*:
 
 ``` r
-token <- oauth_client("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
-  id = Sys.getenv("CDSE_ID"),
-  secret = Sys.getenv("CDSE_SECRET")
+token <- oauth_client(
+  id = "cdse-public",
+  token_url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
 ) |>
-  oauth_flow_client_credentials()
+  oauth_flow_password(
+    username = Sys.getenv("CDSE_USERNAME"),
+    password = Sys.getenv("CDSE_PASSWORD")
+  )
 
 token
 ```
@@ -1116,10 +1543,12 @@ token
     <httr2_token>
     * token_type        : "Bearer"
     * access_token      : <REDACTED>
-    * expires_at        : "2025-12-15 11:45:41"
-    * refresh_expires_in: 0
+    * expires_at        : "2026-03-03 17:48:16"
+    * refresh_token     : <REDACTED>
+    * refresh_expires_in: 3600
     * not-before-policy : 0
-    * scope             : "email profile user-context"
+    * session_state     : "7267911b-0469-c294-0881-22f209005e87"
+    * scope             : "AUDIENCE_PUBLIC openid email profile ondemand_processing user-context"
 
 which will be used for accessing SAFE data. The `token` object contains
 the token itself and, as you can see, when it expires (10 minutes after
@@ -1208,19 +1637,7 @@ request(safe_url) |>
     GET https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value
     Status: 200 OK
     Content-Type: application/zip
-    Body: On disk 
-    
-    <httr2_response>
-
-    GET
-    https://download.dataspace.copernicus.eu/odata/v1/Products(fa3a0848-1568-4dc4-9ecb-dabecf23bd4b)/$value 
-
-    Status: 200 OK
-
-    Content-Type: application/zip
-
-    Body: On disk
-    (1259528508 bytes)
+    Body: On disk (1259528508 bytes)
 
 We need to unzip the file and find the manifest file, which contains
 information on where different data sets are.
@@ -1299,21 +1716,21 @@ First, to compare the time:
 zarr_end - zarr_start
 ```
 
-    Time difference of 33.8 secs
+    Time difference of 32.49 secs
 
 ``` r
 safe_end - safe_start
 ```
 
-    Time difference of 5.26 mins
+    Time difference of 6.41 mins
 
 ``` r
 time_diff <- (safe_time_numeric * 60) - zarr_time_numeric
 time_diff_min <- round(time_diff / 60, 2)
 ```
 
-“The EOPF Zarr example took 35.24 seconds, while the SAFE example took
-5.5 minutes—a difference of over 5 minutes.
+The EOPF Zarr example took 32.49 seconds, while the SAFE example took
+6.41 minutes—a difference of nearly 6 minutes.
 
 We can also compare the size of the objects in R:
 
@@ -1321,7 +1738,7 @@ We can also compare the size of the objects in R:
 obj_size(r60m_tci)
 ```
 
-    9.77 MB
+    9.70 MB
 
 ``` r
 obj_size(r60m_tci_safe)
@@ -1361,7 +1778,14 @@ So, of the 1.17 GB saved to disk, only 0.3% was actually used.
 
 To summarise:
 
-<table>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 17%" />
+<col style="width: 28%" />
+<col style="width: 20%" />
+<col style="width: 17%" />
+</colgroup>
 <thead>
 <tr>
 <th style="text-align: left;">Format</th>
@@ -1374,14 +1798,14 @@ To summarise:
 <tbody>
 <tr>
 <td style="text-align: left;">EOPF Zarr</td>
-<td style="text-align: left;">33.8 secs</td>
+<td style="text-align: left;">32.49 secs</td>
 <td style="text-align: left;">—</td>
 <td style="text-align: left;">—</td>
-<td style="text-align: right;">9.77 MB</td>
+<td style="text-align: right;">9.70 MB</td>
 </tr>
 <tr>
 <td style="text-align: left;">SAFE</td>
-<td style="text-align: left;">315.6 secs</td>
+<td style="text-align: left;">384.60 secs</td>
 <td style="text-align: left;">1.17G</td>
 <td style="text-align: left;">0.3%</td>
 <td style="text-align: right;">45.99 MB</td>
