@@ -1432,7 +1432,7 @@ files as well as an XML manifest. In order to access any scene data, the
 entire zip archive had to be downloaded, which could be quite
 inefficient.
 
-Zarr is optimised for efficient data retrieval—arrays are segmented into
+Zarr is optimised for efficient data retrieval; arrays are segmented into
 one or more chunks, and a single Sentinel scene could potentially be
 across several chunks. A data consumer can choose to download only the
 chunks required for their use case, rather than the entire zip archive.
@@ -1447,7 +1447,7 @@ and downloads less data.
 
 ## Zarr example
 
-This example how to access the 60-metre resolution quicklook of a
+This example shows how to access the 60-metre resolution quicklook of a
 Sentinel-2 mission, explored in more detail [above](#sentinel-2). We set
 up `zarr_start` and `zarr_end` to time the data retrieval and
 visualisation process, for comparison to the SAFE process later on.
