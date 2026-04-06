@@ -37,7 +37,7 @@ A Python environment is required to follow this tutorial. This tutorial's depend
 The following dependencies are required to follow this tutorial.
 
 ```sh
-pip install "matplotlib>=3.10.3,<4.0" "pystac-client>=0.8.6,<1.0" "xarray==2025.4.0" "xarray-eopf==0.1.0"
+pip install "matplotlib>=3.10.8,<4.0" "pystac-client>=0.8.6,<1.0" "xarray==2026.2.0" "xarray-eopf==0.2.5"
 ```
 
 ## Access Zarr Assets
@@ -65,14 +65,21 @@ See [STAC Item Zarr Assets](../eopf_stac_item_zarr_assets.md) for STAC item Zarr
 
 ```python
 client = Client.open("https://stac.core.eopf.eodc.eu/")
-collection = client.get_collection(collection_id="sentinel-2-l2a")
-item = collection.get_item(
-    id="S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252"
-)
-assert item is not None, "Expected item does not exist"
+
+# The EOPF sample service occasionally updates which items are available with collections.
+# Perform a search for a recent item rather than hard-coding an item ID that may later
+# become unavailable.
+items = list(client.search(
+    collections=["sentinel-2-l2a"],
+    limit=1,
+    max_items=1,
+    sortby="-datetime"
+).items())
+assert len(items) == 1, "unable to find suitable Sentinel 2 data"
+item = items[0]
 print(
     "Fetched collection/item {collection}/{id}".format(
-        collection=collection.id, id=item.id
+        collection=item.collection_id, id=item.id
     )
 )
 # Fetched collection/item sentinel-2-l2a/S2B_MSIL2A_20250522T125039_N0511_R095_T26TML_20250522T133252
@@ -112,7 +119,7 @@ print(
 
 ### Loading Zarr Datasets Using xarray
 
-Access the top-level Zarr group using xarray. xarray uses lazy-loading to avoid loading the entire 9GB data structure into memory at once and only fetches relevant array chunks when necessary. See [Optimisations](#optimisations) for more information.
+Access the top-level Zarr group using xarray. xarray uses lazy-loading to avoid loading the entire data structure into memory at once and only fetches relevant array chunks when necessary. See [Optimisations](#optimisations) for more information.
 
 ```python
 # The same asset can also be opened as a xarray.Dataset using the same kwargs.
@@ -184,8 +191,9 @@ The following demonstrates that each variable is provided in a 2-dimensional arr
 
 ```python
 print(
-    "All spatial data for this STAC item is in EPSG:{epsg_code} https://epsg.io/{epsg_code}".format(
-        epsg_code=dt.attrs["stac_discovery"]["properties"]["proj:epsg"]
+    "All spatial data for this STAC item is in {epsg_code} https://epsg.io/{code}".format(
+        epsg_code=item.properties["proj:code"],
+        code=str(item.properties["proj:code"]).split(":")[1],
     )
 )
 # All spatial data for this STAC item is in EPSG:32626 https://epsg.io/32626
@@ -228,11 +236,13 @@ This section provides short and complete examples referencing data from each of 
 
 ### Sentinel 1
 
-The following example shows a Wind Direction plot derived from Sentinel 1 data. It is necessary to interpolate data to a spatial grid prior to rendering.
+The following example shows an ocean wind conditions plot derived from Sentinel 1 data. It is necessary to interpolate data to a spatial grid prior to rendering.
+
 
 ```python
 import matplotlib.pyplot as plt
 import numpy as np
+import re
 import xarray as xr
 from pystac import Asset
 from pystac_client import Client
@@ -242,17 +252,32 @@ from scipy.interpolate import griddata
 # this is expected to be a future requirement.
 
 client = Client.open("https://stac.core.eopf.eodc.eu/")
-collection = client.get_collection(collection_id="sentinel-1-l2-ocn")
-item = collection.get_item(
-    id="S1A_IW_OCN__2SDV_20250604T193923_20250604T193948_059501_0762FA_C971"
-)
+
+# The EOPF sample service occasionally updates which items are available with collections.
+# Perform a search for a recent item rather than hard-coding an item ID that may later
+# become unavailable.
+items = list(client.search(
+    collections=["sentinel-1-l2-ocn"],
+    limit=1,
+    max_items=1,
+    sortby="-datetime"
+).items())
+assert len(items) == 1, "unable to find suitable Sentinel 1 data"
+item = items[0]
 product_asset: Asset = item.assets["product"]
 dt = xr.open_datatree(
     product_asset.href, **product_asset.extra_fields["xarray:open_datatree_kwargs"]
 )
-ds = dt[
-    "/owi/S01SIWOCN_20250604T193923_0025_A340_C971_0762FA_VV/measurements"
-].to_dataset()
+
+# Because we cannot guarantee which item is available we also cannot guarantee
+# the names of some Zarr groups that include the item's ID in the name.
+# Use a basic regular expression to match suitable group names.
+group_name_regex = "^/owi/.+/measurements$"
+matching_group_names = [key for key in dt.groups if re.match(group_name_regex, key)]
+assert len(matching_group_names) == 1, "unexpected group name match"
+group_name = matching_group_names[0]
+ds = dt[group_name].to_dataset()
+
 # Measurements DataArrays do not have (latitude, longitude) dimensions and
 # instead use (azimuth, range) dimensions to record data positions.
 # Latitude and longitude are available as coordinates, and are functions of
@@ -292,15 +317,15 @@ gridded_dataarray.plot(x=longitude_dim_name, y=latitude_dim_name)
 plt.show()
 ```
 
-#### Result
+#### Example Result
 
-![Sentinel 1 Wind Direction Plot](./images/sentinel-1.png "Sentinel 1 Wind Direction Plot")
+![Sample Sentinel 1 Wind Direction Plot](./images/sentinel-1.png "Sample Sentinel 1 Wind Direction Plot")
 
 ### Sentinel 2
 
 The [Access Zarr Assets](#access-zarr-assets) section addresses Sentinel 2 data but does not result in a plot. This section provides an additional example consistent with the examples for Sentinel 1 and Sentinel 3.
 
-The following example shows a TCI (True Colour Image) plot derived from Sentinel 2 data.
+The following example shows an RGB image plot derived from Sentinel 2 data. EOPF Sentinel 2 data no longer provides a "quicklook" True Colour Image (TCI) array so we must construct an RGB plot ourselves.
 
 ```python
 import matplotlib.pyplot as plt
@@ -312,86 +337,86 @@ from pystac_client import Client
 # this is expected to be a future requirement.
 
 client = Client.open("https://stac.core.eopf.eodc.eu/")
-collection = client.get_collection(collection_id="sentinel-2-l2a")
-item = collection.get_item(
-    id="S2A_MSIL2A_20250605T104701_N0511_R051_T35WMU_20250605T125416"
-)
+
+# The EOPF sample service occasionally updates which items are available with collections.
+# Perform a search for a recent item rather than hard-coding an item ID that may later
+# become unavailable.
+items = list(client.search(
+    collections=["sentinel-2-l2a"],
+    limit=1,
+    max_items=1,
+    sortby="-datetime"
+).items())
+assert len(items) == 1, "unable to find suitable Sentinel 2 data"
+item = items[0]
+
 product_asset: Asset = item.assets["product"]
 dt = xr.open_datatree(
     product_asset.href, **product_asset.extra_fields["xarray:open_datatree_kwargs"]
 )
-ds = dt["/quality/l2a_quicklook/r60m"].to_dataset()
-da = ds["tci"]
-da.plot.imshow(rgb="band")
+ds = dt["/measurements/reflectance/r60m"].to_dataset()
+rgb = ds[["b04", "b03", "b02"]].to_array(dim="band")
+rgb.plot.imshow(rgb="band")
 plt.show()
 ```
 
 #### Result
 
-![Sentinel 2 TCI Plot](./images/sentinel-2.png "Sentinel 2 TCI Plot")
+![Sample Sentinel 2 RGB Plot](./images/sentinel-2.png "Sample Sentinel 2 RGB Plot")
 
 ### Sentinel 3
 
-The following example shows a GIFAPAR (Green Instantaneous Fraction of Absorbed Photosynthetically Active Radiation) plot from Sentinel 3 data. It is necessary to interpolate data to a spatial grid prior to rendering.
+The following example shows a GIFAPAR (Green Instantaneous Fraction of Absorbed Photosynthetically Active Radiation) plot from Sentinel 3 data.
+
+It may skip several STAC items before finding an item with sufficient valid pixel values for a useful example.
 
 ```python
 import matplotlib.pyplot as plt
-import numpy as np
 import xarray as xr
 from pystac import Asset
 from pystac_client import Client
-from scipy.interpolate import griddata
 
 # The sample EOPF STAC API does not currently require authentication but
 # this is expected to be a future requirement.
 
 client = Client.open("https://stac.core.eopf.eodc.eu/")
-collection = client.get_collection(collection_id="sentinel-3-olci-l2-lfr")
-item = collection.get_item(
-    id="S3A_OL_2_LFR____20250605T102430_20250605T102730_20250605T122455_0179_126_336_2160_PS1_O_NR_003"
-)
-product_asset: Asset = item.assets["product"]
-dt = xr.open_datatree(
-    product_asset.href, **product_asset.extra_fields["xarray:open_datatree_kwargs"]
-)
-ds = dt["/measurements"]
-# Measurements DataArrays do not have (latitude, longitude) dimensions and
-# instead use (rows, columns) dimensions to record data positions.
-# Latitude and longitude are available as coordinates, and are functions of
-# (rows, columns), but this configuration is not compatible with matplotlib.
-# To plot measurements with a 2D chart we first must interpolate values to
-# a 2D grid. For simplicity in this example we use unprojected latitude and
-# longitude values rather than projecting to a more suitable projected
-# spatial reference system.
-latitudes_np = np.array(ds.latitude.values)
-longitudes_np = np.array(ds.longitude.values)
-lat_min, lat_max = np.nanmin(latitudes_np), np.nanmax(latitudes_np)
-lon_min, lon_max = np.nanmin(longitudes_np), np.nanmax(longitudes_np)
-grid_resolution = 0.01
-lat_grid = np.arange(lat_min, lat_max + grid_resolution, grid_resolution)
-lon_grid = np.arange(lon_min, lon_max + grid_resolution, grid_resolution)
-lon_mesh, lat_mesh = np.meshgrid(lon_grid, lat_grid)
-measurement_name = "gifapar"
-latitude_dim_name = "latitude"
-longitude_dim_name = "longitude"
-gridded_interpolated_values = griddata(
-    np.column_stack((latitudes_np.flatten(), longitudes_np.flatten())),
-    np.array(ds[measurement_name].values).flatten(),
-    (lat_mesh, lon_mesh),
-    method="linear",
-)
-gridded_dataarray = xr.Dataset(
-    data_vars={
-        measurement_name: (
-            [latitude_dim_name, longitude_dim_name],
-            gridded_interpolated_values,
-        )
-    },
-    coords={latitude_dim_name: lat_grid, longitude_dim_name: lon_grid},
-)[measurement_name]
 
-gridded_dataarray.plot(x=longitude_dim_name, y=latitude_dim_name)
-plt.show()
+# The EOPF sample service occasionally updates which items are available with collections.
+# Perform a search for a recent item rather than hard-coding an item ID that may later
+# become unavailable.
+item_limit = 100
+items = list(client.search(
+    collections=["sentinel-3-olci-l2-lfr"],
+    limit=100,
+    max_items=item_limit,
+    sortby="-datetime"
+).items())
+
+# Some STAC items' data arrays have too little data to display a plot.
+# Ensure at least 5% non-NaN values before attempting to display.
+measurement_name = "gifapar"
+for item in items:
+    product_asset: Asset = item.assets["product"]
+    dt = xr.open_datatree(
+        product_asset.href, **product_asset.extra_fields["xarray:open_datatree_kwargs"]
+    )
+    ds = dt["/measurements"]
+
+    nan_count = ds[measurement_name].isnull().sum().compute().item()
+    non_nan_count = ds[measurement_name].notnull().sum().compute().item()
+    if non_nan_count / (non_nan_count + nan_count) > 0.05:
+        print(f"sufficient data values found in item {item.id}, rendering")
+        ds[measurement_name].plot(x="longitude", y="latitude")
+        plt.show()
+        exit(0)
+    else:
+        print(f" skipping item due to insufficient data values {item.id}")
+
+# Process exits before this point if sufficient data discovered.
+print("unable to find sufficient {measurement} data in {count} item(s)".format(
+    measurement=measurement_name,
+    count=item_limit,
+))
 ```
 
 #### Result
@@ -406,7 +431,7 @@ The Zarr data format is optimised for efficient data retrieval. Array data are s
 
 ### Comparable SAFE Example
 
-The following example accesses the same 60 metre True Colour Image via SAFE as is accessed via EOPF Zarr with xarray in the [Sentinel 2 mission example](#sentinel-2). The EOPF Zarr example downloads fewer bytes and requires fewer lines of code.
+The following example accesses a 60 metre True Colour Image via SAFE that is comparable to the RGB image generated from an EOPF Zarr with xarray in the [Sentinel 2 mission example](#sentinel-2). The EOPF Zarr example downloads fewer bytes and requires fewer lines of code.
 
 > [!NOTE]
 > This example requires authentication via credentials stored in environment variables.
@@ -441,24 +466,32 @@ headers = {
     "Authorization": f"Bearer {auth_token}",
 }
 
-client = Client.open("https://catalogue.dataspace.copernicus.eu/stac/")
-collection = client.get_collection(collection_id="SENTINEL-2")
-item = collection.get_item(
-    id="S2A_MSIL2A_20250605T104701_N0511_R051_T35WMU_20250605T125416.SAFE"
-)
-assert item is not None, "failed to fetch item"
-# The asset's href redirects to a download location. Determine this location manually
-# so that the "Authorization: Bearer ..." header is not stripped from the redirected request.
-target_href = requests.get(
-    item.assets["PRODUCT"].href, headers=headers, allow_redirects=False
-).headers["Location"]
+client = Client.open("https://stac.dataspace.copernicus.eu/v1/")
+
+# The EOPF sample service occasionally updates which items are available with collections.
+# Perform a search for a recent item rather than hard-coding an item ID that may later
+# become unavailable.
+items = list(client.search(
+    collections=["sentinel-2-l2a"],
+    limit=1,
+    max_items=1,
+    sortby="-datetime"
+).items())
+assert len(items) == 1, "unable to find suitable Sentinel 2 data"
+item = items[0]
+target_href = item.assets["Product"].href
+
 # Download the entire zip archive for the scene.
 tmp_dir_path = tempfile.mkdtemp()
 zip_path = os.path.join(tmp_dir_path, f"{item.id}.zip")
 print(f"Downloading {target_href}")
 # Downloading https://download.dataspace.copernicus.eu/odata/v1/Products(74252cb9-3567-4a49-8892-40f3a80ac52e)/$value
 with open(zip_path, "wb") as f:
-    for chunk in requests.get(target_href, headers=headers, stream=True).iter_content(
+    for chunk in requests.get(
+        target_href,
+        headers=headers,
+        stream=True
+    ).iter_content(
         chunk_size=1000000
     ):
         print(".", end="")
@@ -470,14 +503,15 @@ for entry in archive.namelist():
     archive.extract(entry, tmp_dir_path)
 
 # Determine the file path to the TCI 60m data using the XML manifest and open that file.
-xml_manifest_path = os.path.join(tmp_dir_path, item.id, "manifest.safe")
+extracted_data_dir = os.path.join(tmp_dir_path, f"{item.id}.SAFE")
+xml_manifest_path = os.path.join(extracted_data_dir, "manifest.safe")
 xml_tree = ET.parse(xml_manifest_path)
 file_location_element = xml_tree.getroot().find(
     ".//dataObject[@ID='IMG_DATA_Band_TCI_60m_Tile1_Data']/byteStream/fileLocation"
 )
 assert file_location_element is not None, "failed to find TCI 60m data"
 tci_60m_file_path = os.path.join(
-    tmp_dir_path, item.id, file_location_element.get("href")
+    extracted_data_dir, file_location_element.get("href")
 )
 
 # Show data on screen.
@@ -487,9 +521,9 @@ plt.show()
 
 ### Data Retrieval and Network Efficiency
 
-The [SAFE example](#comparable-safe-example) downloads a 170 MB zip archive file, extracts it to a temporary location, and ultimately only accesses 0.45 MB of that data. 99.7% of fetched data are unused in this example. Other use-cases may download smaller archives, or use more of the archive's data, but in many use-cases it is likely that significant network bandwidth and storage are wasted.
+The [SAFE example](#comparable-safe-example) has been observed downloading a 170 MB zip archive file. The zip archive was extracted to a temporary location, and ultimately only around 0.45 MB of that data were accessed. 99.7% of fetched data were unused in this example. Other use-cases may download smaller archives, or use more of the archive's data, but in many use-cases it is likely that significant network bandwidth and storage are wasted.
 
-The EOPF Zarr [Sentinel 2 mission example](#sentinel-2) is more efficient. When accessing the EOPF Product asset as a `xarray.DataTree` type, xarray requests the asset's `.zmetadata` consolidated metadata file and the first compressed chunk of each array. This process downloads 0.61 MB. When the TCI plot is shown, xarray lazy-loads a further 0.63 MB of array data. In total only 1.24 MB of data are downloaded. If TCI array data were loaded directly from the relevant STAC item asset href as a `xarray.DataArray` type, and not from a larger `xarray.DataTree` type, the initial 0.61 MB would not be required. This comparison demonstrates the innate network and storage efficiencies of cloud-native data structures.
+The EOPF Zarr [Sentinel 2 mission example](#sentinel-2) is more efficient. When accessing the EOPF Product asset as a `xarray.DataTree` type, xarray requests the asset's `.zmetadata` consolidated metadata file and the first compressed chunk of each array. This process has been observed downloading 0.61 MB. When the RGB plot was shown, xarray lazy-loaded a further 0.63 MB of array data. In total only 1.24 MB of data were downloaded. If TCI array data were loaded directly from the relevant STAC item asset href as a `xarray.DataArray` type, and not from a larger `xarray.DataTree` type, the initial 0.61 MB would not be required. This comparison demonstrates the innate network and storage efficiencies of cloud-native data structures.
 
 ### Optimisations
 
